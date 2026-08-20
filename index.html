@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mataram — The Royal Heritage</title>
+    <meta
+      name="description"
+      content="Sebuah warisan luhur yang hidup dalam sejarah, budaya, dan nilai-nilai Jawa. Digital heritage experience Istana Mataram."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles/main.css" />
+  </head>
+
+  <body>
+    <!-- The 3D pendopo. Fixed behind everything; all page content scrolls over it. -->
+    <canvas id="scene" aria-hidden="true"></canvas>
+
+    <!-- Cream wash that fades in over the canvas for the text-heavy lower sections,
+         so body copy always has contrast to sit on. Driven by ScrollController. -->
+    <div id="scrim" aria-hidden="true"></div>
+
+    <div id="loader">
+      <div class="loader__mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" width="40" height="40">
+          <g fill="none" stroke="currentColor" stroke-width="1.1">
+            <circle cx="20" cy="20" r="3.4" />
+            <ellipse cx="20" cy="10.5" rx="2.6" ry="6" />
+            <ellipse cx="20" cy="29.5" rx="2.6" ry="6" />
+            <ellipse cx="10.5" cy="20" rx="6" ry="2.6" />
+            <ellipse cx="29.5" cy="20" rx="6" ry="2.6" />
+          </g>
+        </svg>
+      </div>
+      <p class="loader__text">MATARAM</p>
+    </div>
+
+    <header class="nav" id="nav">
+      <a class="nav__brand" href="#hero">
+        <span class="nav__glyph" aria-hidden="true">
+          <svg viewBox="0 0 40 40" width="22" height="22">
+            <g fill="none" stroke="currentColor" stroke-width="1.4">
+              <circle cx="20" cy="20" r="3.4" />
+              <ellipse cx="20" cy="10.5" rx="2.6" ry="6" />
+              <ellipse cx="20" cy="29.5" rx="2.6" ry="6" />
+              <ellipse cx="10.5" cy="20" rx="6" ry="2.6" />
+              <ellipse cx="29.5" cy="20" rx="6" ry="2.6" />
+            </g>
+          </svg>
+        </span>
+        MATARAM
+      </a>
+
+      <nav class="nav__links" aria-label="Navigasi utama">
+        <a href="#history">History</a>
+        <a href="#royal-house">Royal House</a>
+        <a href="#palace">Palace</a>
+        <a href="#culture">Culture</a>
+        <a href="#discover">Discover</a>
+      </nav>
+
+      <div class="nav__tools">
+        <button class="nav__icon" type="button" aria-label="Cari">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" stroke-linecap="round" />
+          </svg>
+        </button>
+        <button class="nav__icon" type="button" aria-label="Menu">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <!-- ═══ HERO ═══ -->
+      <section class="hero" id="hero" data-section="hero">
+        <div class="hero__inner">
+          <p class="hero__eyebrow" data-reveal>The Royal Heritage of</p>
+          <h1 class="hero__title" data-reveal data-reveal-delay="0.08">MATARAM</h1>
+          <div class="rule rule--gold" data-reveal data-reveal-delay="0.16" aria-hidden="true">
+            <span class="rule__glyph">&#10022;</span>
+          </div>
+          <p class="hero__lede" data-reveal data-reveal-delay="0.22">
+            Sebuah warisan luhur yang hidup<br />
+            dalam sejarah, budaya, dan nilai-nilai Jawa.
+          </p>
+          <a class="btn btn--gold" href="#intro" data-reveal data-reveal-delay="0.3">
+            EXPLORE
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M5 12h13M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </a>
+        </div>
+
+        <div class="hero__scroll" aria-hidden="true">
+          <span class="hero__scroll-line"></span>
+          <span class="hero__scroll-label">SCROLL</span>
+        </div>
+      </section>
+
+      <!-- ═══ INTRODUCTION — "I Am Mataram" (PDF §6 HOME) ═══ -->
+      <section class="section section--center" id="intro" data-section="intro">
+        <div class="wrap wrap--narrow">
+          <p class="kicker" data-reveal>Introduction</p>
+          <h2 class="h2" data-reveal data-reveal-delay="0.06">I Am Mataram</h2>
+          <p class="lede" data-reveal data-reveal-delay="0.12">
+            Bukan sekadar kerajaan yang tercatat dalam buku sejarah, melainkan sebuah
+            cara memandang dunia — tempat manusia, penguasa, dan alam semesta berdiri
+            dalam satu keselarasan.
+          </p>
+
+          <figure class="philosophy" data-reveal data-reveal-delay="0.18">
+            <blockquote class="philosophy__quote">Manunggaling Kawula Gusti</blockquote>
+            <figcaption class="philosophy__caption">
+              Keselarasan antara manusia, raja, dan alam semesta.
+            </figcaption>
+          </figure>
+
+          <ul class="values" data-reveal data-reveal-delay="0.24">
+            <li><span class="values__glyph" aria-hidden="true">&#10022;</span>HERITAGE</li>
+            <li><span class="values__glyph" aria-hidden="true">&#10022;</span>HONOR</li>
+            <li><span class="values__glyph" aria-hidden="true">&#10022;</span>HARMONY</li>
+            <li><span class="values__glyph" aria-hidden="true">&#10022;</span>LEGACY</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ═══ HISTORY — timeline preview, not paragraphs (PDF §1) ═══ -->
+      <section class="section" id="history" data-section="history">
+        <div class="wrap">
+          <header class="section__head">
+            <p class="kicker" data-reveal>A Kingdom Through Time</p>
+            <h2 class="h2" data-reveal data-reveal-delay="0.06">The Story of Mataram</h2>
+            <a class="link-more" href="#history" data-reveal data-reveal-delay="0.1">
+              Jelajahi timeline
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M5 12h13M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+          </header>
+
+          <ol class="timeline">
+            <li class="timeline__item" data-reveal>
+              <span class="timeline__year">1556</span>
+              <h3 class="timeline__title">Ki Ageng Pemanahan</h3>
+              <p class="timeline__body">
+                Tanah Mataram dianugerahkan sebagai imbalan pengabdian — benih sebuah
+                wangsa yang kelak menguasai Jawa.
+              </p>
+            </li>
+            <li class="timeline__item" data-reveal data-reveal-delay="0.06">
+              <span class="timeline__year">1587</span>
+              <h3 class="timeline__title">Panembahan Senopati</h3>
+              <p class="timeline__body">
+                Pendiri Kesultanan Mataram. Meletakkan fondasi kekuasaan sekaligus
+                mitos yang mengiringinya.
+              </p>
+            </li>
+            <li class="timeline__item" data-reveal data-reveal-delay="0.12">
+              <span class="timeline__year">1613</span>
+              <h3 class="timeline__title">Sultan Agung</h3>
+              <p class="timeline__body">
+                Puncak kejayaan Mataram. Ekspansi, kalender Jawa, dan sintesis budaya
+                yang bertahan hingga hari ini.
+              </p>
+            </li>
+            <li class="timeline__item" data-reveal data-reveal-delay="0.18">
+              <span class="timeline__year">1745</span>
+              <h3 class="timeline__title">Kartasura &amp; Surakarta</h3>
+              <p class="timeline__body">
+                Perpindahan pusat kekuasaan, lalu pembagian yang melahirkan dua
+                keraton besar.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- ═══ THE ROYAL HOUSE ═══ -->
+      <section class="section" id="royal-house" data-section="royal-house">
+        <div class="wrap">
+          <header class="section__head">
+            <p class="kicker" data-reveal>The Royal House</p>
+            <h2 class="h2" data-reveal data-reveal-delay="0.06">Wangsa Mataram</h2>
+            <a class="link-more" href="#royal-house" data-reveal data-reveal-delay="0.1">
+              Silsilah lengkap
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M5 12h13M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+          </header>
+
+          <!-- Genealogy preview — mirrors the moodboard's "STRUKTUR KELUARGA KERAJAAN" -->
+          <div class="genealogy" data-reveal>
+            <div class="genealogy__root">
+              <p class="genealogy__name">SULTAN AGUNG</p>
+              <p class="genealogy__meta">1613 &ndash; 1645</p>
+            </div>
+            <div class="genealogy__branch" aria-hidden="true"></div>
+            <div class="genealogy__children">
+              <div class="genealogy__node">
+                <p class="genealogy__name">KASUNANAN<br />SURAKARTA</p>
+              </div>
+              <div class="genealogy__node">
+                <p class="genealogy__name">KESULTANAN<br />YOGYAKARTA</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="cards cards--3">
+            <article class="card" data-reveal>
+              <h3 class="card__title">The Sovereign</h3>
+              <p class="card__body">
+                Kedudukan raja sebagai poros antara rakyat dan tatanan semesta.
+              </p>
+            </article>
+            <article class="card" data-reveal data-reveal-delay="0.06">
+              <h3 class="card__title">Royal Family</h3>
+              <p class="card__body">
+                Profil keluarga kerajaan dan peran yang diemban tiap generasi.
+              </p>
+            </article>
+            <article class="card" data-reveal data-reveal-delay="0.12">
+              <h3 class="card__title">Royal Messages</h3>
+              <p class="card__body">
+                Pesan dan petuah yang diwariskan dari takhta kepada rakyatnya.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ THE PALACE — the beat where the camera is inside ═══ -->
+      <section class="section section--inside" id="palace" data-section="palace">
+        <div class="wrap">
+          <div class="split">
+            <div class="split__text">
+              <p class="kicker" data-reveal>The Palace</p>
+              <h2 class="h2" data-reveal data-reveal-delay="0.06">Pendopo</h2>
+              <p class="body" data-reveal data-reveal-delay="0.12">
+                Ruang terbuka utama di Keraton sebagai tempat menerima tamu dan
+                upacara resmi. Empat <em>soko guru</em> menyangga atap bertingkat,
+                dan di atasnya <em>tumpang sari</em> menyusun langit-langit
+                berundak — sebuah pernyataan tentang tatanan.
+              </p>
+              <a class="link-more" href="#palace" data-reveal data-reveal-delay="0.18">
+                Baca selengkapnya
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M5 12h13M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </a>
+            </div>
+
+            <ul class="index-list" data-reveal data-reveal-delay="0.1">
+              <li><a href="#palace"><span>Arsitektur</span><span aria-hidden="true">&rarr;</span></a></li>
+              <li><a href="#palace"><span>Ruang Keraton</span><span aria-hidden="true">&rarr;</span></a></li>
+              <li><a href="#palace"><span>Simbol</span><span aria-hidden="true">&rarr;</span></a></li>
+              <li><a href="#palace"><span>Kehidupan Istana</span><span aria-hidden="true">&rarr;</span></a></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ CULTURE ═══ -->
+      <section class="section" id="culture" data-section="culture">
+        <div class="wrap">
+          <header class="section__head">
+            <p class="kicker" data-reveal>The Living Heritage</p>
+            <h2 class="h2" data-reveal data-reveal-delay="0.06">Budaya yang Masih Bernapas</h2>
+          </header>
+
+          <div class="cards cards--3">
+            <article class="card" data-reveal>
+              <h3 class="card__title">Gamelan</h3>
+              <p class="card__body">Laras slendro dan pelog — musik sebagai tata ruang batin.</p>
+            </article>
+            <article class="card" data-reveal data-reveal-delay="0.05">
+              <h3 class="card__title">Batik</h3>
+              <p class="card__body">Motif parang dan kawung, ditulis sebagai bahasa status dan doa.</p>
+            </article>
+            <article class="card" data-reveal data-reveal-delay="0.1">
+              <h3 class="card__title">Upacara</h3>
+              <p class="card__body">Grebeg dan sekaten — siklus yang menautkan istana dengan rakyat.</p>
+            </article>
+            <article class="card" data-reveal data-reveal-delay="0.15">
+              <h3 class="card__title">Seni Pertunjukan</h3>
+              <p class="card__body">Wayang dan bedhaya, tempat sejarah dirawat lewat tubuh dan suara.</p>
+            </article>
+            <article class="card" data-reveal data-reveal-delay="0.2">
+              <h3 class="card__title">Kriya</h3>
+              <p class="card__body">Keris, perak, dan ukir kayu — keahlian yang diturunkan tanpa putus.</p>
+            </article>
+            <article class="card" data-reveal data-reveal-delay="0.25">
+              <h3 class="card__title">Kuliner</h3>
+              <p class="card__body">Rasa keraton yang menyebar menjadi meja makan sehari-hari.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ DISCOVER ═══ -->
+      <section class="section" id="discover" data-section="discover">
+        <div class="wrap">
+          <header class="section__head">
+            <p class="kicker" data-reveal>Discover Mataram</p>
+            <h2 class="h2" data-reveal data-reveal-delay="0.06">Menyusuri Jejaknya</h2>
+          </header>
+
+          <div class="cards cards--tall">
+            <article class="card card--tall" data-reveal>
+              <h3 class="card__title">Heritage Sites</h3>
+              <p class="card__body">Keraton, masjid agung, dan makam raja-raja.</p>
+            </article>
+            <article class="card card--tall" data-reveal data-reveal-delay="0.06">
+              <h3 class="card__title">Nature</h3>
+              <p class="card__body">Gunung, gua, dan lanskap yang membentuk mitosnya.</p>
+            </article>
+            <article class="card card--tall" data-reveal data-reveal-delay="0.12">
+              <h3 class="card__title">Arts &amp; Crafts</h3>
+              <p class="card__body">Sentra kriya yang masih bekerja hari ini.</p>
+            </article>
+            <article class="card card--tall" data-reveal data-reveal-delay="0.18">
+              <h3 class="card__title">Experiences</h3>
+              <p class="card__body">Program dan laku budaya yang bisa diikuti langsung.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ ROYAL ARCHIVE ═══ -->
+      <section class="section section--archive" id="archive" data-section="archive">
+        <div class="wrap">
+          <header class="section__head">
+            <p class="kicker" data-reveal>Royal Archive</p>
+            <h2 class="h2" data-reveal data-reveal-delay="0.06">Arsip Kerajaan</h2>
+          </header>
+
+          <form class="search" role="search" data-reveal data-reveal-delay="0.1" onsubmit="return false;">
+            <label class="sr-only" for="archive-q">Cari koleksi</label>
+            <input id="archive-q" type="search" placeholder="Cari koleksi&hellip;" autocomplete="off" />
+            <button type="submit" aria-label="Cari arsip">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" stroke-linecap="round" />
+              </svg>
+            </button>
+          </form>
+
+          <div class="cards cards--3">
+            <article class="archive-card" data-reveal>
+              <div class="archive-card__plate" aria-hidden="true"><span>&#9678;</span></div>
+              <h3 class="archive-card__title">Sebaran Sultan Agung</h3>
+              <p class="archive-card__meta">1613 &middot; Peristiwa</p>
+            </article>
+            <article class="archive-card" data-reveal data-reveal-delay="0.06">
+              <div class="archive-card__plate" aria-hidden="true"><span>&#9776;</span></div>
+              <h3 class="archive-card__title">Manuskrip Kuno</h3>
+              <p class="archive-card__meta">1742 &middot; Dokumen</p>
+            </article>
+            <article class="archive-card" data-reveal data-reveal-delay="0.12">
+              <div class="archive-card__plate archive-card__plate--dark" aria-hidden="true"><span>&#9670;</span></div>
+              <h3 class="archive-card__title">Artefak Keraton</h3>
+              <p class="archive-card__meta">Benda Pusaka</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ NEWS & EVENTS ═══ -->
+      <section class="section" id="news" data-section="news">
+        <div class="wrap">
+          <header class="section__head">
+            <p class="kicker" data-reveal>News &amp; Events</p>
+            <h2 class="h2" data-reveal data-reveal-delay="0.06">Kabar dari Keraton</h2>
+          </header>
+
+          <ul class="news">
+            <li class="news__item" data-reveal>
+              <span class="news__tag">Royal</span>
+              <h3 class="news__title">Peringatan Tingalan Jumenengan</h3>
+              <span class="news__date">12 Agu 2026</span>
+            </li>
+            <li class="news__item" data-reveal data-reveal-delay="0.05">
+              <span class="news__tag">Special</span>
+              <h3 class="news__title">Pameran Manuskrip Terbuka untuk Umum</h3>
+              <span class="news__date">28 Jul 2026</span>
+            </li>
+            <li class="news__item" data-reveal data-reveal-delay="0.1">
+              <span class="news__tag">Local</span>
+              <h3 class="news__title">Lokakarya Batik Tulis Angkatan Baru</h3>
+              <span class="news__date">03 Jul 2026</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap">
+        <div class="footer__top">
+          <div class="footer__brand">
+            <p class="footer__mark">MATARAM</p>
+            <p class="footer__tag">THE ROYAL HERITAGE</p>
+            <div class="rule rule--gold rule--sm" aria-hidden="true">
+              <span class="rule__glyph">&#10022;</span>
+            </div>
+            <p class="footer__note">SEJARAH &middot; BUDAYA &middot; WARISAN</p>
+          </div>
+
+          <nav class="footer__cols" aria-label="Navigasi footer">
+            <div>
+              <h4>Jelajahi</h4>
+              <a href="#history">History</a>
+              <a href="#royal-house">Royal House</a>
+              <a href="#palace">The Palace</a>
+              <a href="#culture">Culture</a>
+            </div>
+            <div>
+              <h4>Koleksi</h4>
+              <a href="#discover">Discover</a>
+              <a href="#archive">Royal Archive</a>
+              <a href="#news">News &amp; Events</a>
+            </div>
+            <div>
+              <h4>Tentang</h4>
+              <a href="#intro">Mission</a>
+              <a href="#intro">Vision</a>
+              <a href="#intro">Values</a>
+            </div>
+          </nav>
+        </div>
+
+        <p class="footer__legal">
+          &copy; 2026 Istana Mataram. Digital heritage experience.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

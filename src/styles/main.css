@@ -1,0 +1,1146 @@
+/* ════════════════════════════════════════════════════════════════════════
+   MATARAM — The Royal Heritage
+   Design system lifted from referensi/moodboard.png.
+
+   PDF §8 sets the brief for this file: "Modern Heritage — modern editorial
+   layout dengan nuansa heritage, bukan ornamen kerajaan berlebihan" and
+   "Slow & dignified motion". So: generous whitespace, a strict two-typeface
+   pairing, gold used only as a rule or an accent, and no motion faster than
+   0.6s anywhere on the page.
+   ════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Palette — the moodboard's six swatches, left to right. */
+  --forest: #2c4a34;
+  --sage: #93a98d;
+  --gold: #c9a34e;
+  --tan: #dcc89a;
+  --cream: #e8e2d0;
+  --paper: #f7f4ec;
+
+  --forest-deep: #1b2f21;
+  --ink: #23301f;
+  --ink-soft: #5c6a58;
+
+  --font-display: 'Cormorant Garamond', 'Times New Roman', serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* A 4px base step keeps vertical rhythm consistent across sections. */
+  --gap-xs: 8px;
+  --gap-sm: 16px;
+  --gap-md: 32px;
+  --gap-lg: 64px;
+  --gap-xl: 120px;
+
+  --wrap: 1180px;
+  --wrap-narrow: 720px;
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ── reset ─────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Lenis drives scrolling; native smooth-scroll would fight it. */
+  scroll-behavior: auto;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── 3D canvas + scrim ─────────────────────────────────────────────────── */
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+}
+
+/*
+  A cream wash between the canvas and the copy. Its opacity is animated by
+  ScrollController rather than fixed, so the 3D stays fully open at the hero and
+  at the palace beat, and recedes behind the text-dense sections.
+*/
+#scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--cream);
+  opacity: 0;
+  will-change: opacity;
+}
+
+main,
+.nav,
+.footer {
+  position: relative;
+  z-index: 2;
+}
+
+/* ── loader ────────────────────────────────────────────────────────────── */
+
+#loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-sm);
+  background: var(--cream);
+  color: var(--gold);
+  transition: opacity 0.9s var(--ease), visibility 0.9s;
+}
+
+#loader.is-done {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.loader__mark {
+  animation: breathe 2.6s ease-in-out infinite;
+}
+
+.loader__text {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
+  color: var(--forest);
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+/* ── nav ───────────────────────────────────────────────────────────────── */
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-md);
+  padding: 22px clamp(20px, 4vw, 52px);
+  transition: background-color 0.5s var(--ease), backdrop-filter 0.5s var(--ease),
+    border-color 0.5s var(--ease), padding 0.5s var(--ease);
+  border-bottom: 1px solid transparent;
+}
+
+/* Set once the page leaves the hero — keeps the nav legible over pale copy. */
+.nav.is-solid {
+  padding: 14px clamp(20px, 4vw, 52px);
+  background: rgba(247, 244, 236, 0.86);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom-color: rgba(44, 74, 52, 0.12);
+}
+
+.nav__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  text-decoration: none;
+  color: var(--forest);
+  white-space: nowrap;
+}
+
+.nav__glyph {
+  color: var(--gold);
+}
+
+.nav__links {
+  display: flex;
+  gap: clamp(14px, 2.2vw, 34px);
+}
+
+.nav__links a {
+  font-size: 0.76rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--forest);
+  opacity: 0.78;
+  position: relative;
+  padding-bottom: 3px;
+  transition: opacity 0.35s var(--ease);
+}
+
+.nav__links a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.45s var(--ease);
+}
+
+.nav__links a:hover {
+  opacity: 1;
+}
+
+.nav__links a:hover::after {
+  transform: scaleX(1);
+}
+
+.nav__tools {
+  display: flex;
+  gap: var(--gap-xs);
+}
+
+.nav__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  background: none;
+  border: 1px solid rgba(44, 74, 52, 0.18);
+  border-radius: 50%;
+  color: var(--forest);
+  cursor: pointer;
+  transition: background-color 0.35s var(--ease), border-color 0.35s var(--ease);
+}
+
+.nav__icon:hover {
+  background: rgba(201, 163, 78, 0.14);
+  border-color: var(--gold);
+}
+
+/* ── shared type ───────────────────────────────────────────────────────── */
+
+.wrap {
+  width: 100%;
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: 0 clamp(20px, 5vw, 40px);
+}
+
+.wrap--narrow {
+  max-width: var(--wrap-narrow);
+}
+
+/*
+  Copy that sits directly on the 3D rather than on a card gets a cream halo, the
+  same trick the hero uses. This is what pays for the lower scrim — the dancer
+  stays visible through the middle of the page and the text stays readable, which
+  a single global wash could not do at once.
+*/
+.kicker,
+.h2,
+.lede,
+.timeline__year,
+.timeline__title,
+.timeline__body,
+.link-more,
+.philosophy__quote,
+.philosophy__caption,
+.news__title,
+.news__tag,
+.news__date,
+.values li {
+  text-shadow: 0 1px 10px rgba(247, 244, 236, 0.92),
+    0 0 24px rgba(247, 244, 236, 0.8);
+}
+
+/* Inside the dark Palace panel the halo would glow around the type — remove it. */
+.split .kicker,
+.split .h2,
+.split .body,
+.split .link-more {
+  text-shadow: none;
+}
+
+.kicker {
+  margin: 0 0 var(--gap-sm);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.h2 {
+  margin: 0 0 var(--gap-md);
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4.4vw, 3.4rem);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: 0.005em;
+  color: var(--forest);
+}
+
+.lede {
+  margin: 0 auto;
+  max-width: 58ch;
+  font-size: clamp(1.02rem, 1.5vw, 1.16rem);
+  line-height: 1.85;
+  color: var(--ink-soft);
+}
+
+.body {
+  margin: 0 0 var(--gap-md);
+  max-width: 52ch;
+  color: var(--ink-soft);
+}
+
+.body em {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.1em;
+  color: var(--forest);
+}
+
+/* Gold hairline with the moodboard's rosette centred on it. */
+.rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: var(--gap-md) 0;
+}
+
+.rule::before,
+.rule::after {
+  content: '';
+  height: 1px;
+  width: clamp(48px, 12vw, 130px);
+  background: linear-gradient(90deg, transparent, var(--gold));
+}
+
+.rule::after {
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+
+.rule__glyph {
+  color: var(--gold);
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.rule--sm::before,
+.rule--sm::after {
+  width: 42px;
+}
+
+.link-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--forest);
+  transition: gap 0.4s var(--ease), color 0.4s var(--ease);
+}
+
+.link-more:hover {
+  gap: 15px;
+  color: var(--gold);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 34px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: background-color 0.45s var(--ease), color 0.45s var(--ease),
+    gap 0.45s var(--ease), border-color 0.45s var(--ease);
+}
+
+.btn--gold {
+  background: var(--gold);
+  color: var(--paper);
+}
+
+.btn--gold:hover {
+  gap: 20px;
+  background: transparent;
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ── hero ──────────────────────────────────────────────────────────────── */
+
+.hero {
+  position: relative;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  /*
+    Weighted bottom padding lifts the copy block into the clear sky above the roof
+    instead of centring it on the pendopo. Uses vh rather than a fixed value so
+    short viewports don't push the button off-screen.
+  */
+  padding: 110px 20px clamp(120px, 22vh, 250px);
+}
+
+.hero__inner {
+  position: relative;
+  max-width: 760px;
+}
+
+/*
+  Hero copy sits directly on the 3D, over roof shingles and pillar grain. A blanket
+  scrim over the whole hero fixes legibility but washes the pendopo out to a ghost,
+  which costs more than it buys. A per-element cream halo does the same job with no
+  visible edge and leaves the render at full contrast.
+*/
+.hero__eyebrow,
+.hero__lede {
+  text-shadow: 0 1px 12px rgba(247, 244, 236, 0.95),
+    0 0 28px rgba(247, 244, 236, 0.85), 0 0 52px rgba(247, 244, 236, 0.6);
+}
+
+.hero__eyebrow {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(1.15rem, 2.4vw, 1.75rem);
+  font-weight: 300;
+  color: var(--forest);
+  opacity: 0.9;
+}
+
+.hero__title {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(3.4rem, 12vw, 8.2rem);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: 0.06em;
+  text-indent: 0.06em;
+  color: var(--forest);
+}
+
+.hero__lede {
+  margin: 0 auto var(--gap-lg);
+  max-width: 40ch;
+  font-size: clamp(0.95rem, 1.5vw, 1.08rem);
+  line-height: 1.9;
+  /* Darker than the section ledes — this one competes with the render behind it. */
+  color: var(--ink);
+}
+
+.hero__scroll {
+  position: absolute;
+  bottom: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.hero__scroll-line {
+  width: 1px;
+  height: 54px;
+  background: linear-gradient(180deg, transparent, var(--gold));
+  position: relative;
+  overflow: hidden;
+}
+
+/* A single travelling tick — the only looping motion on the page. */
+.hero__scroll-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--forest);
+  animation: scrollTick 2.4s var(--ease) infinite;
+}
+
+@keyframes scrollTick {
+  0% {
+    transform: translateY(-100%);
+  }
+  60%,
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.hero__scroll-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--ink-soft);
+}
+
+/* ── sections ──────────────────────────────────────────────────────────── */
+
+.section {
+  padding: var(--gap-xl) 0;
+}
+
+.section--center {
+  text-align: center;
+}
+
+/* The palace beat sits over the interior shot — pull the panel in and let the
+   3D carry more of the frame. */
+.section--inside {
+  padding: calc(var(--gap-xl) * 1.3) 0;
+}
+
+.section__head {
+  margin-bottom: var(--gap-lg);
+  max-width: 60ch;
+}
+
+.section--center .section__head {
+  margin-inline: auto;
+}
+
+/* ── philosophy block ──────────────────────────────────────────────────── */
+
+.philosophy {
+  margin: var(--gap-lg) auto;
+  max-width: 32ch;
+}
+
+.philosophy__quote {
+  margin: 0 0 var(--gap-sm);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(1.6rem, 3.6vw, 2.5rem);
+  font-weight: 300;
+  line-height: 1.3;
+  color: var(--forest);
+}
+
+.philosophy__caption {
+  font-size: 0.94rem;
+  line-height: 1.75;
+  color: var(--ink-soft);
+}
+
+.values {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(20px, 5vw, 64px);
+  margin: var(--gap-lg) 0 0;
+  padding: var(--gap-md) 0 0;
+  border-top: 1px solid rgba(201, 163, 78, 0.3);
+  list-style: none;
+}
+
+.values li {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  color: var(--forest);
+}
+
+.values__glyph {
+  color: var(--gold);
+}
+
+/* ── timeline ──────────────────────────────────────────────────────────── */
+
+.timeline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid rgba(44, 74, 52, 0.16);
+}
+
+.timeline__item {
+  position: relative;
+  padding: var(--gap-md) var(--gap-md) var(--gap-md) 0;
+  border-right: 1px solid rgba(44, 74, 52, 0.1);
+}
+
+.timeline__item:last-child {
+  border-right: none;
+}
+
+/* The node on the rail. */
+.timeline__item::before {
+  content: '';
+  position: absolute;
+  top: -4.5px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--gold);
+  border-radius: 50%;
+}
+
+.timeline__year {
+  display: block;
+  margin-bottom: var(--gap-xs);
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  color: var(--gold);
+}
+
+.timeline__title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 1.32rem;
+  font-weight: 500;
+  color: var(--forest);
+}
+
+.timeline__body {
+  margin: 0;
+  padding-right: var(--gap-sm);
+  font-size: 0.92rem;
+  line-height: 1.8;
+  color: var(--ink-soft);
+}
+
+/* ── genealogy ─────────────────────────────────────────────────────────── */
+
+.genealogy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: var(--gap-lg);
+  padding: var(--gap-lg) var(--gap-md);
+  background: rgba(247, 244, 236, 0.72);
+  border: 1px solid rgba(201, 163, 78, 0.28);
+}
+
+.genealogy__root,
+.genealogy__node {
+  padding: 16px 30px;
+  text-align: center;
+  background: var(--paper);
+  border: 1px solid rgba(44, 74, 52, 0.2);
+}
+
+.genealogy__name {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  line-height: 1.6;
+  color: var(--forest);
+}
+
+.genealogy__meta {
+  margin: 6px 0 0;
+  font-size: 0.72rem;
+  color: var(--gold);
+}
+
+.genealogy__branch {
+  width: 1px;
+  height: 40px;
+  background: rgba(44, 74, 52, 0.28);
+}
+
+.genealogy__children {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(20px, 6vw, 90px);
+}
+
+/* Horizontal connector joining the two branches. */
+.genealogy__children::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 25%;
+  right: 25%;
+  height: 1px;
+  background: rgba(44, 74, 52, 0.28);
+}
+
+.genealogy__node {
+  position: relative;
+}
+
+.genealogy__node::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  width: 1px;
+  height: 20px;
+  background: rgba(44, 74, 52, 0.28);
+}
+
+/* ── cards ─────────────────────────────────────────────────────────────── */
+
+.cards {
+  display: grid;
+  gap: 1px;
+  background: rgba(44, 74, 52, 0.12);
+  border: 1px solid rgba(44, 74, 52, 0.12);
+}
+
+.cards--3 {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.cards--tall {
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.card {
+  padding: var(--gap-md);
+  background: rgba(247, 244, 236, 0.88);
+  transition: background-color 0.5s var(--ease), transform 0.5s var(--ease);
+}
+
+.card:hover {
+  background: var(--paper);
+}
+
+.card--tall {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.card__title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: var(--forest);
+}
+
+.card__body {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.8;
+  color: var(--ink-soft);
+}
+
+/* ── palace split ──────────────────────────────────────────────────────── */
+
+/*
+  Right-aligned and narrowed, not full width. The camera holds the dancer in the
+  left third at this beat and a centred full-width panel would sit straight on top
+  of her — the one shot the section exists to show.
+*/
+.split {
+  display: grid;
+  /* Single column at this width — two would leave both too cramped to read. */
+  grid-template-columns: 1fr;
+  gap: var(--gap-md);
+  width: min(100%, 620px);
+  margin-left: auto;
+  padding: var(--gap-md) clamp(22px, 3vw, 40px);
+  background: rgba(44, 74, 52, 0.9);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  color: var(--cream);
+}
+
+/* Inverted panel — recolour the shared type utilities inside it. */
+.split .kicker {
+  color: var(--tan);
+}
+
+.split .h2 {
+  color: var(--paper);
+}
+
+.split .body {
+  color: rgba(232, 226, 208, 0.82);
+}
+
+.split .body em {
+  color: var(--tan);
+}
+
+.split .link-more {
+  color: var(--tan);
+}
+
+.split .link-more:hover {
+  color: var(--paper);
+}
+
+.index-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid rgba(220, 200, 154, 0.28);
+}
+
+.index-list a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+  padding: 17px 4px;
+  font-size: 0.88rem;
+  text-decoration: none;
+  color: var(--cream);
+  border-bottom: 1px solid rgba(220, 200, 154, 0.28);
+  transition: padding 0.4s var(--ease), color 0.4s var(--ease);
+}
+
+.index-list a:hover {
+  padding-left: 14px;
+  color: var(--tan);
+}
+
+/* ── archive ───────────────────────────────────────────────────────────── */
+
+.section--archive {
+  background: rgba(247, 244, 236, 0.58);
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+  margin-bottom: var(--gap-md);
+  padding: 6px 6px 6px 20px;
+  background: var(--paper);
+  border: 1px solid rgba(44, 74, 52, 0.2);
+}
+
+.search input {
+  flex: 1;
+  padding: 10px 0;
+  background: none;
+  border: none;
+  font-size: 0.92rem;
+  outline: none;
+}
+
+.search input::placeholder {
+  color: var(--sage);
+}
+
+.search button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  background: var(--forest);
+  border: none;
+  color: var(--paper);
+  cursor: pointer;
+  transition: background-color 0.4s var(--ease);
+}
+
+.search button:hover {
+  background: var(--gold);
+}
+
+.archive-card {
+  padding: var(--gap-sm);
+  background: rgba(247, 244, 236, 0.9);
+  transition: background-color 0.5s var(--ease);
+}
+
+.archive-card:hover {
+  background: var(--paper);
+}
+
+.archive-card__plate {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  margin-bottom: var(--gap-sm);
+  background: linear-gradient(140deg, var(--cream), var(--tan));
+  color: rgba(44, 74, 52, 0.4);
+  font-size: 2.4rem;
+}
+
+.archive-card__plate--dark {
+  background: linear-gradient(140deg, var(--forest-deep), var(--forest));
+  color: rgba(201, 163, 78, 0.75);
+}
+
+.archive-card__title {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 1.16rem;
+  font-weight: 500;
+  color: var(--forest);
+}
+
+.archive-card__meta {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+/* ── news ──────────────────────────────────────────────────────────────── */
+
+.news {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid rgba(44, 74, 52, 0.16);
+}
+
+.news__item {
+  display: grid;
+  grid-template-columns: 110px 1fr auto;
+  gap: var(--gap-md);
+  align-items: baseline;
+  padding: var(--gap-md) 0;
+  border-bottom: 1px solid rgba(44, 74, 52, 0.12);
+  transition: padding-left 0.5s var(--ease);
+}
+
+.news__item:hover {
+  padding-left: 14px;
+}
+
+.news__tag {
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.news__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.18rem, 2.2vw, 1.55rem);
+  font-weight: 400;
+  color: var(--forest);
+}
+
+.news__date {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── footer ────────────────────────────────────────────────────────────── */
+
+.footer {
+  padding: var(--gap-xl) 0 var(--gap-md);
+  background: var(--forest);
+  color: var(--cream);
+}
+
+.footer__top {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: var(--gap-lg);
+  padding-bottom: var(--gap-lg);
+  border-bottom: 1px solid rgba(220, 200, 154, 0.22);
+}
+
+.footer__mark {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--paper);
+}
+
+.footer__tag {
+  margin: 6px 0 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  color: var(--tan);
+}
+
+.footer .rule {
+  justify-content: flex-start;
+  margin: var(--gap-sm) 0;
+}
+
+.footer .rule::before {
+  display: none;
+}
+
+.footer__note {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: rgba(232, 226, 208, 0.6);
+}
+
+.footer__cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--gap-md);
+}
+
+.footer__cols h4 {
+  margin: 0 0 var(--gap-sm);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--tan);
+}
+
+.footer__cols a {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.88rem;
+  text-decoration: none;
+  color: rgba(232, 226, 208, 0.8);
+  transition: color 0.35s var(--ease);
+}
+
+.footer__cols a:hover {
+  color: var(--paper);
+}
+
+.footer__legal {
+  margin: var(--gap-md) 0 0;
+  font-size: 0.76rem;
+  color: rgba(232, 226, 208, 0.5);
+}
+
+/* ── reveal ────────────────────────────────────────────────────────────── */
+
+/*
+  Only hide content once JS has confirmed it can animate it back in. Without the
+  .has-js gate a script failure would leave the whole page blank.
+*/
+.has-js [data-reveal] {
+  opacity: 0;
+  transform: translateY(26px);
+  will-change: opacity, transform;
+}
+
+/* ── responsive ────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  .footer__top {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline__item {
+    border-right: none;
+    border-bottom: 1px solid rgba(44, 74, 52, 0.1);
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --gap-xl: 84px;
+    --gap-lg: 44px;
+  }
+
+  .nav__links {
+    display: none;
+  }
+
+  .news__item {
+    grid-template-columns: 1fr;
+    gap: var(--gap-xs);
+  }
+}
+
+/* ── reduced motion ────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Content must never be left hidden — the reveal tween is what would have
+     restored it, and that tween is skipped in this mode. */
+  .has-js [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
