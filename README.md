@@ -296,10 +296,55 @@ tidak ada bounce, reveal `power2.out` 1.05s.
 
 ---
 
+## Halaman dalam (History → About)
+
+Lima halaman di luar homepage dibangun dari handoff Claude Design
+(`Istana Mataram.dc.html`) — layout dan konten ikut design, warna diambil dari
+palette yang sudah ada di `main.css`.
+
+Skemanya **terang**, mengikuti navbar homepage: paper untuk panel, cream untuk
+ground. Hijau bukan lagi latar melainkan aksen — warna heading, hairline, dan
+dua blok kutipan. Semua diatur lewat token `--pg-*` di `pages.css`; blok hijau
+(`.psec--forest`, `.closing`) menimpa token yang sama dengan nilai on-dark-nya,
+jadi komponen di dalamnya membalik sendiri tanpa aturan tambahan.
+
+Ini **multi-page**, bukan router: tiap halaman punya entry sendiri di
+`vite.config.js`, sehingga three/gsap/lenis hanya dikirim ke homepage.
+
+| Halaman | File | Script | Interaksi |
+| --- | --- | --- | --- |
+| History | `history.html` | `src/pages/history.js` | Rail 9 era, panel detail, prev/next, panah kiri-kanan |
+| Royal House | `royal-house.html` | `src/pages/royal-house.js` | Silsilah 9 generasi, profil di `<dialog>` |
+| Palace | `palace.html` | `src/pages/palace.js` | Denah keraton interaktif + chip 10 ruang |
+| Royal Archive | `archive.html` | `src/pages/archive.js` | Pencarian live + filter kategori |
+| About | `about.html` | `src/pages/page.js` | Statis |
+
+Semua konten ditulis langsung di HTML — JS cuma menyembunyikan/menampilkan,
+tidak pernah merender. Jadi tanpa JS pun kelima halaman tetap dokumen lengkap.
+
+Chrome bersama (nav gelap, overlay menu mobile, reveal on scroll, fallback
+gambar) ada di `src/pages/shell.js` + `src/styles/pages.css`.
+
+### Foto
+
+Halaman-halaman ini memakai `/img/<nama>.png` dari `public/img/`, yang masih
+kosong. Setiap `.frame` sengaja dikirim dengan `data-empty`, jadi yang tampil
+adalah plat placeholder bergaris emas berlabel; `shell.js` melepas flag itu
+begitu gambar sungguhan berhasil dimuat. Cukup jatuhkan file ke `public/img/`
+dan foto langsung muncul, tanpa ubah markup.
+
+Nama file yang sudah ditunggu: `keraton-pendopo`, `royal-couple`, `batik`,
+`gamelan`, `manuscript`, `pendopo-interior`, `historic-illustration` (tujuh ini
+ada di project Claude Design), plus `imogiri`, `surakarta`, `kotagede`,
+`pemanahan`, `batavia`, `calendar-decree`, `kris`, `pakubuwono-xiii`, `grebeg`,
+`centhini`, `royal-portrait`.
+
+---
+
 ## Yang belum dikerjakan
 
-- Halaman selain homepage (History, Royal House, Palace, Culture, Discover,
-  Archive, News, About) — sitemap-nya ada di PDF §4.
-- Menu hamburger dan search belum fungsional (markup + style sudah ada).
+- Halaman Culture, Discover, dan News & Events — sitemap-nya ada di PDF §4.
+  Untuk sekarang item-item itu jadi anchor ke section homepage.
+- Foto untuk `public/img/`, sesuai daftar di atas.
 - Konten masih placeholder editorial; belum dari CMS atau data existing.
 - Asset Higgsfield, sesuai catatan di atas.
