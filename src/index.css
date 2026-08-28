@@ -1,0 +1,177 @@
+@import 'tailwindcss';
+
+/* ════════════════════════════════════════════════════════════════════════
+   MATARAM — design tokens
+   Palet, tipografi, dan easing diangkat dari referensi/moodboard.png.
+   Semua yang didaftarkan di @theme otomatis jadi utility Tailwind:
+   --color-forest  →  bg-forest / text-forest / border-forest
+   --font-display  →  font-display
+   --ease-heritage →  ease-heritage
+   ════════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* Enam swatch moodboard, kiri ke kanan. */
+  --color-forest: #2c4a34;
+  --color-sage: #93a98d;
+  --color-gold: #c9a34e;
+  --color-tan: #dcc89a;
+  --color-cream: #e8e2d0;
+  --color-paper: #f7f4ec;
+
+  /* Turunan, bukan warna baru: gelap untuk kontras, terang untuk kartu. */
+  --color-forest-deep: #1b2f21;
+  --color-forest-mid: #3a5c44;
+  /* --gold di atas --paper cuma ~2:1; versi gelap ini lolos 4.5:1. */
+  --color-gold-deep: #7a5f2b;
+  --color-ink: #23301f;
+  --color-ink-soft: #5c6a58;
+
+  --font-display: 'Cormorant Garamond', 'Times New Roman', serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* PDF §8 "slow & dignified motion" — satu easing untuk seluruh situs. */
+  --ease-heritage: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --animate-breathe: breathe 2.6s ease-in-out infinite;
+  --animate-scroll-tick: scroll-tick 2.4s var(--ease-heritage) infinite;
+  --animate-fade-in: fade-in 0.35s var(--ease-heritage) both;
+  --animate-era-in: era-in 0.5s var(--ease-heritage) both;
+
+  @keyframes breathe {
+    0%,
+    100% {
+      opacity: 0.35;
+      transform: scale(0.94);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.04);
+    }
+  }
+
+  @keyframes scroll-tick {
+    0% {
+      transform: translateY(-100%);
+    }
+    60%,
+    100% {
+      transform: translateY(100%);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes era-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* ── base ──────────────────────────────────────────────────────────────── */
+
+@layer base {
+  html {
+    /* Lenis yang menggerakkan scroll; smooth-scroll native akan berkelahi. */
+    scroll-behavior: auto;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-cream text-ink font-body text-base font-light leading-[1.7] antialiased;
+    overflow-x: hidden;
+  }
+
+  /*
+    Reveal homepage digerakkan GSAP, jadi state awalnya harus CSS.
+    Digerbangi .has-js: kalau scene 3D gagal boot, kelasnya dilepas dan
+    seluruh isi halaman tetap terbaca alih-alih blank.
+  */
+  .has-js [data-reveal] {
+    opacity: 0;
+    transform: translateY(26px);
+    will-change: opacity, transform;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .has-js [data-reveal] {
+      opacity: 1;
+      transform: none;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ── utility yang tidak bisa diungkapkan class bawaan ──────────────────── */
+
+/*
+  Halo krem di belakang teks yang duduk langsung di atas render 3D. Scrim
+  penuh akan memucatkan pendopo; halo per-elemen bikin teks terbaca tanpa
+  menurunkan kontras render.
+*/
+@utility halo {
+  text-shadow:
+    0 1px 10px rgb(247 244 236 / 0.92),
+    0 0 24px rgb(247 244 236 / 0.8);
+}
+
+@utility halo-strong {
+  text-shadow:
+    0 1px 12px rgb(247 244 236 / 0.95),
+    0 0 28px rgb(247 244 236 / 0.85),
+    0 0 52px rgb(247 244 236 / 0.6);
+}
+
+/* Arsiran emas untuk frame foto yang filenya belum ada. */
+@utility hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 9px,
+    rgb(201 163 78 / 0.07) 9px 10px
+  );
+}
+
+/* Scrollbar default berupa balok abu di tengah timeline emas. */
+@utility rail-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(201 163 78 / 0.35) transparent;
+
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgb(44 74 52 / 0.25);
+    border-radius: 4px;
+  }
+}
+
+/* <dialog> backdrop tidak bisa disentuh utility class. */
+@layer components {
+  dialog::backdrop {
+    background: rgb(24 34 27 / 0.72);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+  }
+}

@@ -1,9 +1,14 @@
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
-
-const page = (file) => fileURLToPath(new URL(file, import.meta.url));
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    // `@/components/...` instead of `../../components/...`
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
   server: {
     port: 5173,
     open: false,
@@ -11,23 +16,13 @@ export default defineConfig({
   build: {
     target: 'es2020',
     rollupOptions: {
-      // A multi-page build, not a router: the homepage carries the 3D scene and
-      // the inner pages are plain documents, so keeping them as separate entries
-      // means none of three/gsap/lenis is shipped to History, Palace, and so on.
-      input: {
-        main: page('./index.html'),
-        history: page('./history.html'),
-        royalHouse: page('./royal-house.html'),
-        palace: page('./palace.html'),
-        archive: page('./archive.html'),
-        about: page('./about.html'),
-      },
       output: {
         // three is the bulk of the homepage bundle; splitting it lets the browser
         // cache it across deploys where only site code changes.
-        manualChunks: {
-          three: ['three'],
-          motion: ['gsap', 'lenis'],
+        manualChunks(id) {
+          if (id.includes('node_modules/three')) return 'three';
+          if (id.includes('node_modules/gsap') || id.includes('node_modules/lenis')) return 'motion';
+          return null;
         },
       },
     },
