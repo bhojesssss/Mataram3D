@@ -2,6 +2,7 @@ import Lenis from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { beats, resolveBeats } from '../config/tokens.js';
+import { publishProgress, setSmoothScroll } from './scrollBus.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -36,7 +37,7 @@ const SCRIM_PATH = [
   // Eased back from 0.84 once the dancer became the subject. At that value she
   // was a ghost everywhere except the Palace beat, and a dance the reader only
   // sees one frame of is not a dance. The copy keeps its legibility from the
-  // per-element halos in main.css instead of from a blanket wash.
+  // per-element halos (the `halo` utility in index.css) instead of a blanket wash.
   { beat: 'threshold', v: 0.6 },
   { beat: 'interior', v: 0.1 },
   { beat: 'ascend', v: 0.6 },
@@ -68,12 +69,10 @@ export class ScrollController {
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
     this.scrim = document.getElementById('scrim');
-    this.nav = document.getElementById('nav');
 
     this._measure();
     this._initLenis();
     this._initReveals();
-    this._initAnchors();
     this._initResize();
   }
 
@@ -123,6 +122,9 @@ export class ScrollController {
       wheelMultiplier: 1,
     });
 
+    // Supaya <HashLink> bisa menggeser halaman lewat smoothing yang sama.
+    setSmoothScroll(this.lenis);
+
     this.lenis.on('scroll', ({ scroll, limit }) => {
       this.progress = limit > 0 ? Math.min(scroll / limit, 1) : 0;
       this._apply();
@@ -145,10 +147,8 @@ export class ScrollController {
       this.scrim.style.opacity = sampleKeys(this.scrimKeys, this.progress).toFixed(3);
     }
 
-    if (this.nav) {
-      // Solid once the hero title has cleared the bar.
-      this.nav.classList.toggle('is-solid', this.progress > 0.035);
-    }
+    // The navbar reads this to decide when it goes solid; see scrollBus.js.
+    publishProgress(this.progress);
   }
 
   _initReveals() {
@@ -181,21 +181,6 @@ export class ScrollController {
     }
   }
 
-  /** Anchor links have to go through Lenis or they bypass the smoothing. */
-  _initAnchors() {
-    this._onClick = (e) => {
-      const link = e.target.closest('a[href^="#"]');
-      if (!link) return;
-      const id = link.getAttribute('href');
-      if (!id || id === '#') return;
-      const target = document.querySelector(id);
-      if (!target) return;
-      e.preventDefault();
-      this.lenis.scrollTo(target, { offset: -70, duration: 1.5 });
-    };
-    document.addEventListener('click', this._onClick);
-  }
-
   refresh() {
     this._measure();
     ScrollTrigger.refresh();
@@ -203,10 +188,18 @@ export class ScrollController {
   }
 
   dispose() {
-    document.removeEventListener('click', this._onClick);
+    setSmoothScroll(null);
+    // Nav membaca ini untuk memutuskan kapan jadi padat; tanpa reset, nilai
+    // terakhir dari homepage akan terbawa saat pembaca kembali ke sana.
+    publishProgress(0);
     window.removeEventListener('resize', this._onResize);
     gsap.ticker.remove(this._tick);
     ScrollTrigger.getAll().forEach((t) => t.kill());
+    // Killing the triggers does not wipe the scroll positions ScrollTrigger
+    // caches per scroller. In the MPA those died with the page; in an SPA they
+    // outlive the route change and the next refresh() restores them, dropping
+    // the reader back where they left the homepage instead of at the hero.
+    ScrollTrigger.clearScrollMemory();
     this.lenis.destroy();
   }
 }

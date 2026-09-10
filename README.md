@@ -1,7 +1,8 @@
 # MATARAM — The Royal Heritage
 
-Homepage untuk digital heritage experience Istana Mataram. Three.js + scroll-driven
-camera, dibangun dari `referensi/` (moodboard + PDF content structure).
+Digital heritage experience Istana Mataram. React + Tailwind, dengan homepage
+Three.js + scroll-driven camera. Dibangun dari `referensi/` (moodboard + PDF
+content structure).
 
 ```bash
 npm install
@@ -39,8 +40,22 @@ membawanya.
 
 ## Arsitektur
 
+**React 19 + React Router 7 + Tailwind 4, di atas Vite.** Three.js-nya tidak
+disentuh konversi — semua di `src/scene/` masih kelas JS biasa; React hanya
+mengurus daur hidupnya lewat `<Scene3D>`.
+
 ```
 src/
+├── main.jsx                 createRoot + BrowserRouter
+├── App.jsx                  peta route
+├── index.css                @theme Tailwind (palet, font, easing, keyframes)
+├── data/                    seluruh isi editorial — era, silsilah, ruang, arsip
+├── pages/                   Home, History, RoyalHouse, Palace, Archive, About
+├── components/
+│   ├── layout/              SiteLayout, Nav, MobileMenu, Footer
+│   ├── home/                Scene3D, Loader, HomeBackdrop
+│   └── ui/                  Wrap, Frame, Chip, Reveal, HashLink, Type, Page
+├── hooks/                   usePageMeta, useReveal
 ├── config/
 │   ├── tokens.js            palette, font, beat table + resolveBeats()
 │   └── assets.manifest.js   slot Higgsfield (semua disabled)
@@ -51,9 +66,22 @@ src/
 │   ├── Particles.js         debu, GPU-animated
 │   ├── CameraRig.js         spline kamera + damping
 │   └── textures.js          canvas texture (batik, jati, batu, sirap)
-├── scroll/ScrollController.js   Lenis + GSAP, satu-satunya sumber progress
-└── main.js
+└── scroll/
+    ├── ScrollController.js  Lenis + GSAP, satu-satunya sumber progress
+    └── scrollBus.js         jembatan tipis ke React (progress + scrollToHash)
 ```
+
+**Konten hidup di `src/data/`, bukan di markup.** Sembilan era History, sembilan
+generasi silsilah, sepuluh ruang keraton, dan lima belas record arsip dulunya
+ditulis satu per satu di HTML. Sekarang masing-masing satu array, dan komponennya
+merender daftar itu. Menambah era cukup satu entri — rail, panel detail, dan
+navigasi panah semuanya ikut.
+
+**`scrollBus.js` menjaga batas React.** ScrollController itu imperatif dan hidup
+di luar React. Dulu ia menyentuh DOM langsung — `nav.classList.toggle('is-solid')`
+dan listener klik global untuk anchor. Sekarang ia menerbitkan progress ke sebuah
+store kecil yang navbar-nya berlangganan, dan `<HashLink>` yang meminta geseran.
+React tetap satu-satunya yang menulis ke DOM-nya sendiri.
 
 ### Yang penting dipahami sebelum mengubah
 
@@ -267,18 +295,36 @@ maupun 144Hz.
 
 ## Design system
 
-Diambil langsung dari moodboard:
+Diambil langsung dari moodboard, didaftarkan di blok `@theme` pada
+`src/index.css`. Tailwind menurunkan utility-nya sendiri dari situ, jadi
+`--color-forest` langsung jadi `bg-forest` / `text-forest` / `border-forest`:
 
 | token | hex | pakai di |
 |---|---|---|
-| `--forest` | `#2C4A34` | heading, panel Palace |
-| `--sage` | `#93A98D` | teks sekunder, layer jauh |
-| `--gold` | `#C9A34E` | CTA, rule, ornamen |
-| `--tan` | `#DCC89A` | trim, teks di panel gelap |
-| `--cream` | `#E8E2D0` | ground halaman |
-| `--paper` | `#F7F4EC` | card |
+| `--color-forest` | `#2C4A34` | heading, panel Palace |
+| `--color-sage` | `#93A98D` | teks sekunder, layer jauh |
+| `--color-gold` | `#C9A34E` | CTA, rule, ornamen |
+| `--color-tan` | `#DCC89A` | trim, teks di panel gelap |
+| `--color-cream` | `#E8E2D0` | ground halaman |
+| `--color-paper` | `#F7F4EC` | card |
 
-Font: **Cormorant Garamond** (display) + **Inter** (body).
+Turunannya — `forest-deep`, `forest-mid`, `gold-deep`, `ink`, `ink-soft` — bukan
+warna baru: `gold` di atas `paper` cuma ~2:1, jadi `gold-deep` dipakai untuk teks
+kecil di latar terang.
+
+Font: **Cormorant Garamond** (`font-display`) + **Inter** (`font-body`).
+
+Yang tidak bisa diungkapkan utility bawaan didefinisikan sebagai `@utility` di
+file yang sama, bukan sebagai class lepas: `halo` / `halo-strong` (bayangan teks
+krem di bawah copy yang duduk langsung di atas render 3D), `hatch` (arsiran emas
+untuk frame foto yang kosong), dan `rail-scroll` (scrollbar timeline History).
+
+Untuk hal yang berulang di banyak halaman, class-nya dipegang satu komponen —
+`<Eyebrow>`, `<Kicker>`, `<Dlink>`, `<ButtonOutline>`, `<Rule>` di
+`components/ui/Type.jsx` — bukan disalin sebagai deretan class panjang. Blok
+hijau (kutipan Royal House, penutup About) memakai prop `tone="dark"`; di CSS
+lama ini ditangani dengan menukar custom property `--pg-*` di dalam
+`.psec--forest`.
 
 Motion mengikuti PDF §8 — "slow & dignified": tidak ada transisi di bawah 0.35s,
 tidak ada bounce, reveal `power2.out` 1.05s.
@@ -288,9 +334,15 @@ tidak ada bounce, reveal `power2.out` 1.05s.
 ## Aksesibilitas & ketahanan
 
 - `prefers-reduced-motion` dihormati di CSS **dan** di CameraRig (kamera snap ke
-  pose, tanpa breath/parallax).
-- Reveal di-gate `.has-js`. Kalau JS gagal, konten tidak pernah tersembunyi.
+  pose, tanpa breath/parallax). Di halaman dalam, `<Reveal>` memakai varian
+  `motion-reduce:` sehingga isinya langsung tampil tanpa transisi.
+- Reveal homepage di-gate `.has-js` — kelas itu dipasang `<Scene3D>` dan dilepas
+  lagi kalau boot-nya gagal, jadi kegagalan scene tidak pernah meninggalkan
+  halaman kosong.
 - WebGL gagal → canvas dibuang, halaman tetap dokumen lengkap yang terbaca.
+- `<dialog>` tanpa `showModal` (browser lawas) → silsilah turun jadi kartu
+  statis dengan profil yang ikut terlihat, bukan tombol yang tidak membuka
+  apa-apa.
 - Loader punya timeout 2.5s, tidak akan menggantung kalau font atau GPU macet.
 - Scene pause saat tab hidden.
 
@@ -300,38 +352,48 @@ tidak ada bounce, reveal `power2.out` 1.05s.
 
 Lima halaman di luar homepage dibangun dari handoff Claude Design
 (`Istana Mataram.dc.html`) — layout dan konten ikut design, warna diambil dari
-palette yang sudah ada di `main.css`.
+palette yang sudah ada di `@theme` (`src/index.css`).
 
 Skemanya **terang**, mengikuti navbar homepage: paper untuk panel, cream untuk
 ground. Hijau bukan lagi latar melainkan aksen — warna heading, hairline, dan
-dua blok kutipan. Semua diatur lewat token `--pg-*` di `pages.css`; blok hijau
-(`.psec--forest`, `.closing`) menimpa token yang sama dengan nilai on-dark-nya,
-jadi komponen di dalamnya membalik sendiri tanpa aturan tambahan.
+dua blok kutipan.
 
-Ini **multi-page**, bukan router: tiap halaman punya entry sendiri di
-`vite.config.js`, sehingga three/gsap/lenis hanya dikirim ke homepage.
-
-| Halaman | File | Script | Interaksi |
+| Halaman | Route | Komponen | Interaksi |
 | --- | --- | --- | --- |
-| History | `history.html` | `src/pages/history.js` | Rail 9 era, panel detail, prev/next, panah kiri-kanan |
-| Royal House | `royal-house.html` | `src/pages/royal-house.js` | Silsilah 9 generasi, profil di `<dialog>` |
-| Palace | `palace.html` | `src/pages/palace.js` | Denah keraton interaktif + chip 10 ruang |
-| Royal Archive | `archive.html` | `src/pages/archive.js` | Pencarian live + filter kategori |
-| About | `about.html` | `src/pages/page.js` | Statis |
+| History | `/history` | `src/pages/History.jsx` | Rail 9 era, panel detail, prev/next, panah kiri-kanan |
+| Royal House | `/royal-house` | `src/pages/RoyalHouse.jsx` | Silsilah 9 generasi, profil di `<dialog>` |
+| Palace | `/palace` | `src/pages/Palace.jsx` | Denah keraton interaktif, 10 ruang |
+| Royal Archive | `/archive` | `src/pages/Archive.jsx` | Pencarian live + filter kategori |
+| About | `/about` | `src/pages/About.jsx` | Statis |
 
-Semua konten ditulis langsung di HTML — JS cuma menyembunyikan/menampilkan,
-tidak pernah merender. Jadi tanpa JS pun kelima halaman tetap dokumen lengkap.
+URL-nya sama seperti sebelumnya, tanpa akhiran `.html`.
 
-Chrome bersama (nav gelap, overlay menu mobile, reveal on scroll, fallback
-gambar) ada di `src/pages/shell.js` + `src/styles/pages.css`.
+**Yang hilang dari pindah ke SPA:** versi lama adalah enam dokumen HTML lengkap
+yang tetap terbaca tanpa JS dan langsung bisa di-crawl. Sekarang seluruh isi
+dirender React, jadi tanpa JS yang tersisa cuma `<div id="root">`. Kalau SEO atau
+ketahanan tanpa-JS jadi penting, jalan keluarnya prerender saat build (mis.
+`vite-plugin-ssg`) — bukan kembali ke enam file HTML.
+
+Karena ini SPA, server produksinya harus mengembalikan `index.html` untuk semua
+path (rewrite SPA), kalau tidak `/history` yang dibuka langsung akan 404.
+
+**three/gsap/lenis tetap tidak dikirim ke halaman dalam.** Dulu itu dijamin oleh
+build multi-entry Vite; sekarang oleh satu `lazy(() => import('./Scene3D'))` di
+`HomeBackdrop`. Bundle utama tinggal React + router + kelima halaman; 750 kB
+scene dan motion diunduh hanya kalau homepage yang dibuka. Kalau impor itu
+diubah jadi statis, seluruh three ikut ke setiap halaman.
+
+Chrome bersama — navbar, overlay menu mobile, footer — ada di
+`components/layout/SiteLayout.jsx`, satu tempat untuk enam halaman.
 
 ### Foto
 
 Halaman-halaman ini memakai `/img/<nama>.png` dari `public/img/`, yang masih
-kosong. Setiap `.frame` sengaja dikirim dengan `data-empty`, jadi yang tampil
-adalah plat placeholder bergaris emas berlabel; `shell.js` melepas flag itu
-begitu gambar sungguhan berhasil dimuat. Cukup jatuhkan file ke `public/img/`
-dan foto langsung muncul, tanpa ubah markup.
+kosong. `<Frame>` (`components/ui/Frame.jsx`) mulai dalam keadaan kosong dan
+menampilkan plat placeholder bergaris emas berlabel; `onLoad` yang membukanya
+begitu gambar sungguhan berhasil dimuat. Gambarnya tetap dirender dengan
+`opacity: 0` — bukan `display: none` — supaya browser terus memuatnya. Cukup
+jatuhkan file ke `public/img/` dan foto langsung muncul, tanpa ubah markup.
 
 Nama file yang sudah ditunggu: `keraton-pendopo`, `royal-couple`, `batik`,
 `gamelan`, `manuscript`, `pendopo-interior`, `historic-illustration` (tujuh ini
