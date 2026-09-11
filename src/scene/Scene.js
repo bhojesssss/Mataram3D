@@ -356,6 +356,7 @@ export class Scene {
     this.dancer = new Dancer();
     this.dancer.position.set(0, 1.2, 0);
     this.scene.add(this.dancer);
+    window.__scene = this; // TEMP: screenshot hook, remove
 
     this.particles = new Particles(900);
     this.scene.add(this.particles);
