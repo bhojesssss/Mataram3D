@@ -12,7 +12,7 @@ export const EMPTY_RECORD = {
   era: '',
   imageUrl: '',
   externalUrl: '',
-  isPublished: true,
+  isPublished: false,
 };
 
 export function toFormValues(record) {

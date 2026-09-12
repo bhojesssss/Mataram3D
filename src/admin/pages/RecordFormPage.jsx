@@ -13,7 +13,7 @@ import { useApiError } from '../session';
 import { useToast } from '../toast';
 import { ImageField } from '../components/ImageField';
 import { RecordPreview } from '../components/RecordPreview';
-import { Field, FieldMessage, FOCUS, INPUT, LABEL, Notice, PrimaryButton, SECONDARY, Switch, describedBy } from '../ui';
+import { Field, FieldMessage, FOCUS, INPUT, LABEL, Notice, PrimaryButton, SECONDARY, SMALL_GHOST, describedBy } from '../ui';
 
 const FOCUS_TARGETS = [
   ['imageUrl', '#record-image'],
@@ -51,6 +51,7 @@ function RecordFormPage({ id }) {
   const [submitError, setSubmitError] = useState(null);
 
   const [phase, setPhase] = useState(null);
+  const [action, setAction] = useState(null);
 
   const [pendingImage, setPendingImage] = useState(null);
 
@@ -148,17 +149,16 @@ function RecordFormPage({ id }) {
   const set = (key) => (value) => setValues((current) => ({ ...current, [key]: value }));
   const text = (key) => (event) => set(key)(event.target.value);
   const heading = isEdit ? initial.title || t('form.headingEdit') : t('form.headingNew');
-  const saveLabel =
-    phase === 'uploading'
-      ? t('form.uploadingImage')
-      : phase === 'saving'
-        ? t('common.saving')
-        : t(isEdit ? 'form.saveEdit' : 'form.saveNew');
+  const busy = phase === 'uploading' ? t('form.uploadingImage') : t('common.saving');
+  const label = (kind, text) => (saving && action === kind ? busy : text);
 
   async function onSubmit(event) {
     event.preventDefault();
     setSubmitted(true);
     setSubmitError(null);
+
+    const choice = event.nativeEvent?.submitter?.value;
+    const publish = choice === 'publish' ? true : choice === 'draft' ? false : values.isPublished;
 
     const found = validateRecord(shown, t);
     const first = FOCUS_TARGETS.find(([key]) => found[key]);
@@ -168,6 +168,7 @@ function RecordFormPage({ id }) {
     }
 
     let uploaded = null;
+    setAction(publish ? 'publish' : 'draft');
     try {
       let imageUrl = values.imageUrl;
       if (pendingImage) {
@@ -179,13 +180,9 @@ function RecordFormPage({ id }) {
       }
 
       setPhase('saving');
-      const payload = { ...toPayload(values), imageUrl };
+      const payload = { ...toPayload(values), imageUrl, isPublished: publish };
       const saved = isEdit ? await api.updateRecord(id, payload) : await api.createRecord(payload);
-      toast(
-        isEdit
-          ? t('form.toastUpdated', { title: saved.title })
-          : t('form.toastCreated', { title: saved.title, draft: !saved.isPublished }),
-      );
+      toast(t(saved.isPublished ? 'form.toastPublished' : 'form.toastDraft', { title: saved.title }));
       navigate('/admin');
     } catch (err) {
       if (uploaded) api.deleteUpload(uploaded.path).catch(() => {});
@@ -199,6 +196,7 @@ function RecordFormPage({ id }) {
             : toMessage(err);
       if (message) setSubmitError(message);
       setPhase(null);
+      setAction(null);
     }
   }
 
@@ -343,30 +341,24 @@ function RecordFormPage({ id }) {
           <section className="rounded-lg border border-forest/15 bg-paper p-5">
             <h2 className="font-display text-[1.3rem] leading-tight text-forest">{t('form.sections.publishing.title')}</h2>
 
-            <div className="mt-4 flex items-start justify-between gap-4 rounded-lg bg-cream/70 p-3.5">
-              <div className="min-w-0">
-                <p id="publish-label" className={LABEL}>
-                  {t('form.fields.publish')}
-                </p>
-                <p id="publish-hint" className="mt-0.5 text-[0.78rem] leading-relaxed text-ink/72">
-                  {t(values.isPublished ? 'form.fields.publishOn' : 'form.fields.publishOff')}
-                </p>
-              </div>
-              <Switch
-                id="record-isPublished"
-                checked={values.isPublished}
-                onChange={set('isPublished')}
-                labelledBy="publish-label"
-                describedBy="publish-hint"
-              />
-            </div>
+            <p className="mt-1 text-[0.78rem] leading-relaxed text-ink/72">{t('form.sections.publishing.description')}</p>
+
+            {isEdit && (
+              <p className="mt-3 text-[0.8rem] text-ink/72">
+                {t('form.currentStatus')}{' '}
+                <span className="font-medium text-forest">{t(initial.isPublished ? 'status.published' : 'status.draft')}</span>
+              </p>
+            )}
 
             <div className="mt-5 space-y-2.5 max-[999px]:hidden">
               <SaveStatus dirty={dirty} saving={saving} t={t} />
-              <PrimaryButton type="submit" disabled={saving} className="w-full">
-                {saveLabel}
+              <PrimaryButton type="submit" value="publish" disabled={saving} className="w-full">
+                {label('publish', t(isEdit ? 'form.publishEdit' : 'form.publish'))}
               </PrimaryButton>
-              <Link to="/admin" onClick={confirmLeave} className={cx(SECONDARY, 'w-full')}>
+              <button type="submit" value="draft" disabled={saving} className={cx(SECONDARY, 'w-full')}>
+                {label('draft', t(isEdit ? 'form.saveDraftEdit' : 'form.saveDraft'))}
+              </button>
+              <Link to="/admin" onClick={confirmLeave} className={cx(SMALL_GHOST, 'block w-full text-center')}>
                 {t('common.cancel')}
               </Link>
             </div>
@@ -385,12 +377,15 @@ function RecordFormPage({ id }) {
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-forest/15 bg-paper min-[1000px]:hidden">
         <Wrap className="py-3">
           <SaveStatus dirty={dirty} saving={saving} t={t} compact />
-          <div className="flex gap-3">
-            <Link to="/admin" onClick={confirmLeave} className={cx(SECONDARY, 'flex-1')}>
+          <div className="flex gap-2">
+            <Link to="/admin" onClick={confirmLeave} className={cx(SECONDARY, 'px-3')}>
               {t('common.cancel')}
             </Link>
-            <PrimaryButton type="submit" form="record-form" disabled={saving} className="flex-[2]">
-              {saveLabel}
+            <button type="submit" form="record-form" value="draft" disabled={saving} className={cx(SECONDARY, 'flex-1')}>
+              {label('draft', t('form.saveDraft'))}
+            </button>
+            <PrimaryButton type="submit" form="record-form" value="publish" disabled={saving} className="flex-[1.3]">
+              {label('publish', t('form.publish'))}
             </PrimaryButton>
           </div>
         </Wrap>
