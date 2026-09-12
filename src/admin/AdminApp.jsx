@@ -1,3 +1,4 @@
+/** Peta route dasbor, dibungkus penyedia bahasa dan penjaga sesi. */
 import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { I18nProvider } from './i18n';
@@ -6,14 +7,6 @@ import LoginPage from './pages/LoginPage';
 import RecordsPage from './pages/RecordsPage';
 import RecordFormRoute from './pages/RecordFormPage';
 
-/**
- * Peta route dasbor, relatif terhadap /admin.
- *
- *   /admin/login            masuk
- *   /admin                  daftar arsip
- *   /admin/records/new      arsip baru
- *   /admin/records/:id      ubah arsip
- */
 export default function AdminApp() {
   useNoIndex();
 
@@ -32,7 +25,6 @@ export default function AdminApp() {
   );
 }
 
-/** Dasbor tidak boleh terindeks mesin pencari. Dilepas lagi saat keluar dari /admin. */
 function useNoIndex() {
   useEffect(() => {
     const meta = document.createElement('meta');

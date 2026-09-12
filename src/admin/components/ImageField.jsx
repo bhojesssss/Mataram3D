@@ -1,3 +1,4 @@
+/** Pemilih gambar sampul. Hasil potongan diserahkan ke form, bukan langsung diunggah. */
 import { useRef, useState } from 'react';
 import { cx } from '@/lib/cx';
 import { Frame } from '@/components/ui/Frame';
@@ -7,11 +8,10 @@ import { ERROR_TEXT, FOCUS, SECONDARY, describedBy } from '../ui';
 import { CARD_RATIO, CropDialog, MIN_OUTPUT_WIDTH } from './CropDialog';
 
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];
-/** Batas foto yang dipilih. Yang diunggah adalah hasil potongan, jauh lebih kecil (batas server 2 MB). */
+
 const MAX_SOURCE_BYTES = 15 * 1024 * 1024;
 const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 
-/** Lebar maksimum bidang gambar: cukup untuk menilai foto, tanpa mendominasi form. */
 const MEDIA = 'w-full max-w-[400px]';
 
 function loadImage(file) {
@@ -27,22 +27,11 @@ function loadImage(file) {
   });
 }
 
-/**
- * Pemilih gambar sampul: pilih foto → atur bagian yang tampil (CropDialog) → hasil
- * potongan diserahkan ke form lewat `onPick(blob)`.
- *
- * Komponen ini sengaja tidak mengunggah apa pun. Form yang mengunggah saat admin menekan
- * Simpan, supaya storage hanya berisi gambar yang benar-benar dipakai arsip: memilih
- * gambar lalu membatalkan, atau mengganti gambar sebelum menyimpan, tidak meninggalkan file.
- *
- * @param previewUrl  URL gambar tersimpan, atau blob: URL hasil potongan yang belum diunggah
- * @param pending     true kalau previewUrl belum diunggah
- */
 export function ImageField({ id, previewUrl, pending, onPick, error }) {
   const { t } = useI18n();
   const inputRef = useRef(null);
   const [crop, setCrop] = useState(null);
-  // Kunci terjemahan, supaya pesan ikut berganti bahasa.
+
   const [pickError, setPickError] = useState(null);
   const [dragging, setDragging] = useState(false);
 
@@ -64,7 +53,7 @@ export function ImageField({ id, previewUrl, pending, onPick, error }) {
     } catch {
       return setPickError('image.errorRead');
     }
-    // Sisi foto yang masuk bingkai 16:10 harus ≥ 800px, supaya kartu tidak buram.
+
     const { naturalWidth: w, naturalHeight: h } = loaded.image;
     if (Math.min(w, h * CARD_RATIO) < MIN_OUTPUT_WIDTH) {
       URL.revokeObjectURL(loaded.url);

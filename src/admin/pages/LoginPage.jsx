@@ -1,3 +1,4 @@
+/** Halaman masuk dasbor. */
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { cx } from '@/lib/cx';
@@ -8,7 +9,6 @@ import { LanguageSwitch, useI18n } from '../i18n';
 import { errorMessage, safeNext } from '../session';
 import { FOCUS, Field, INPUT, Notice, PrimaryButton, describedBy } from '../ui';
 
-/** Status login yang punya pesan sendiri; selebihnya memakai pesan backend atau error jaringan. */
 const KNOWN_LOGIN_ERRORS = [400, 401, 429];
 
 export default function LoginPage() {
@@ -22,14 +22,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  // Kunci terjemahan, bukan teks, supaya pesan ikut berganti saat bahasa diganti.
+
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState(null);
   const [pending, setPending] = useState(false);
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
 
-  // Sudah masuk (mis. membuka halaman ini dari bookmark): langsung ke dasbor.
   useEffect(() => {
     let active = true;
     api.me().then(
@@ -69,7 +68,7 @@ export default function LoginPage() {
 
   return (
     <main className="grid min-h-svh bg-cream min-[900px]:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-      {/* Panel identitas. Roset besar adalah lambang situs, dipakai sebagai motif, bukan hiasan acak. */}
+
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-forest-deep p-[clamp(40px,5vw,72px)] text-cream min-[900px]:flex">
         <div className="flex items-center gap-3">
           <span className="text-gold">

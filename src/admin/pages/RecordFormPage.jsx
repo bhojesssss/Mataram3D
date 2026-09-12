@@ -1,3 +1,4 @@
+/** Form tambah dan ubah arsip. Gambar baru diunggah saat tombol Simpan ditekan. */
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { cx } from '@/lib/cx';
@@ -14,7 +15,6 @@ import { ImageField } from '../components/ImageField';
 import { RecordPreview } from '../components/RecordPreview';
 import { Field, FieldMessage, FOCUS, INPUT, LABEL, Notice, PrimaryButton, SECONDARY, Switch, describedBy } from '../ui';
 
-/** Urutan field di layar, dipakai untuk memfokuskan kesalahan pertama. */
 const FOCUS_TARGETS = [
   ['imageUrl', '#record-image'],
   ['title', '#record-title'],
@@ -24,33 +24,17 @@ const FOCUS_TARGETS = [
   ['externalUrl', '#record-externalUrl'],
 ];
 
-/** Status HTTP upload yang punya penjelasan lebih berguna daripada pesan mentah backend. */
 const UPLOAD_ERRORS = {
   413: 'image.error413',
   415: 'image.errorType',
   500: 'image.error500',
 };
 
-/** Dipasang ulang per id, supaya pindah dari satu arsip ke arsip lain tidak membawa isi form lama. */
 export default function RecordFormRoute() {
   const { id } = useParams();
   return <RecordFormPage key={id ?? 'new'} id={id} />;
 }
 
-/*
-  Tata letak:
-  - Tombol kembali di pojok kiri atas (ikon ‹ + teks, seperti aplikasi pada umumnya),
-    lalu judul halaman biasa.
-  - Kolom utama: satu kartu berisi bagian-bagian isian. Label bagian di kiri, isian di kanan;
-    gambar sampul paling atas, mengikuti susunan kartu di situs.
-  - Kolom samping (desktop): panel Publikasi yang menempel saat digulir, berisi saklar
-    terbit dan tombol Simpan, lalu pratinjau kartu.
-  - Layar < 1000px: panel samping turun ke bawah form, dan tombol Simpan pindah ke bar
-    yang menempel di bawah layar (mudah dijangkau jempol).
-
-  Gambar baru hanya diunggah saat Simpan ditekan (lihat onSubmit), jadi storage tidak
-  menampung gambar dari form yang dibatalkan.
-*/
 function RecordFormPage({ id }) {
   const isEdit = id !== undefined;
   const { t } = useI18n();
@@ -65,15 +49,15 @@ function RecordFormPage({ id }) {
   const [loadError, setLoadError] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState(null);
-  // null | 'uploading' | 'saving'
+
   const [phase, setPhase] = useState(null);
-  // Hasil potongan yang belum diunggah: { blob, previewUrl }.
+
   const [pendingImage, setPendingImage] = useState(null);
 
   useEffect(() => {
     if (!isEdit) return;
     let active = true;
-    // Backend tidak punya GET per id. Daftar arsip admin kecil, jadi ambil semua lalu cari.
+
     api.listRecords().then(
       (list) => {
         if (!active) return;
@@ -98,7 +82,6 @@ function RecordFormPage({ id }) {
     };
   }, []);
 
-  // blob: URL pratinjau dilepas saat diganti atau saat meninggalkan halaman.
   useEffect(() => {
     if (!pendingImage) return;
     return () => URL.revokeObjectURL(pendingImage.previewUrl);
@@ -107,7 +90,6 @@ function RecordFormPage({ id }) {
   const saving = phase !== null;
   const dirty = values !== null && (pendingImage !== null || JSON.stringify(values) !== JSON.stringify(initial));
 
-  // Menutup tab atau memuat ulang dengan isian yang belum disimpan.
   useEffect(() => {
     if (!dirty || saving) return;
     const warn = (event) => {
@@ -159,9 +141,8 @@ function RecordFormPage({ id }) {
     );
   }
 
-  // Yang ditampilkan dan divalidasi: gambar yang belum diunggah pun dihitung sebagai "ada gambar".
   const shown = pendingImage ? { ...values, imageUrl: pendingImage.previewUrl } : values;
-  // Setelah percobaan simpan pertama, kesalahan diperbarui sambil admin mengetik (dan saat bahasa diganti).
+
   const errors = submitted ? validateRecord(shown, t) : {};
   const errorCount = Object.keys(errors).length;
   const set = (key) => (value) => setValues((current) => ({ ...current, [key]: value }));
@@ -207,8 +188,6 @@ function RecordFormPage({ id }) {
       );
       navigate('/admin');
     } catch (err) {
-      // Gambar sudah masuk storage tapi arsipnya gagal disimpan: jangan tinggalkan file tanpa pemilik.
-      // Backend menolak menghapusnya kalau ternyata arsipnya tersimpan (mis. respons hilang di jalan).
       if (uploaded) api.deleteUpload(uploaded.path).catch(() => {});
 
       const uploadFailed = pendingImage !== null && uploaded === null;
@@ -382,7 +361,6 @@ function RecordFormPage({ id }) {
               />
             </div>
 
-            {/* Tombol simpan desktop. Di layar sempit disembunyikan; bar bawah yang dipakai. */}
             <div className="mt-5 space-y-2.5 max-[999px]:hidden">
               <SaveStatus dirty={dirty} saving={saving} t={t} />
               <PrimaryButton type="submit" disabled={saving} className="w-full">
@@ -421,7 +399,6 @@ function RecordFormPage({ id }) {
   );
 }
 
-/** Satu bagian form: label bagian di kiri (desktop), isian di kanan. Bertumpuk di layar sempit. */
 function FormSection({ title, description, children }) {
   return (
     <section className="grid gap-5 p-[clamp(18px,2.6vw,28px)] min-[760px]:grid-cols-[170px_minmax(0,1fr)] min-[760px]:gap-8">
@@ -434,7 +411,6 @@ function FormSection({ title, description, children }) {
   );
 }
 
-/** Keterangan di atas tombol simpan, teks saja. Tingginya tetap, jadi tombol tidak melompat. */
 function SaveStatus({ dirty, saving, t, compact = false }) {
   const content = dirty && !saving ? t('form.unsaved') : null;
   return (

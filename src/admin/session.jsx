@@ -1,3 +1,4 @@
+/** Penjaga sesi admin dan penerjemah pesan error dari API. */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './api';
@@ -13,27 +14,15 @@ export function useSession() {
   return value;
 }
 
-/**
- * Tujuan balik setelah login hanya boleh halaman dasbor. `?next=` datang dari
- * URL yang bisa dikarang siapa saja, jadi nilai lain diganti /admin.
- */
 export function safeNext(next) {
   return typeof next === 'string' && next.startsWith('/admin') && !next.startsWith('/admin/login') ? next : '/admin';
 }
 
-/** Kegagalan di sisi klien diterjemahkan; pesan dari backend ditampilkan apa adanya. */
 export function errorMessage(error, t) {
   if (error?.code) return t(`errors.${error.code}`);
   return error?.message || t('errors.unexpected');
 }
 
-/**
- * Gerbang semua halaman dasbor selain login.
- *
- * Cookie sesi httpOnly tidak bisa dibaca JS, jadi status login ditanyakan ke
- * GET /auth/me. Sekali saat dasbor dibuka; setelah itu sesi dijaga refresh
- * otomatis di api.js, dan halaman memanggil `expire()` kalau refresh pun gagal.
- */
 export function RequireAdmin() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -57,7 +46,6 @@ export function RequireAdmin() {
     );
   }, [toLogin]);
 
-  // Sengaja hanya saat dipasang: berpindah antarhalaman dasbor tidak perlu bertanya ulang.
   useEffect(() => {
     check();
   }, []);
@@ -70,7 +58,6 @@ export function RequireAdmin() {
         try {
           await api.logout();
         } catch {
-          // Gagal menghubungi server bukan alasan menahan admin di dasbor.
         }
         navigate('/admin/login', { replace: true });
       },
@@ -106,11 +93,6 @@ export function RequireAdmin() {
   );
 }
 
-/**
- * Ubah error API jadi pesan untuk ditampilkan. 401 di sini berarti refresh pun
- * gagal (sesi benar-benar habis): admin langsung dialihkan ke login dan hook ini
- * mengembalikan null supaya halaman tidak menampilkan apa-apa.
- */
 export function useApiError() {
   const { expire } = useSession();
   const { t } = useI18n();

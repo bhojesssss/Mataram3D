@@ -1,3 +1,4 @@
+/** Notifikasi singkat setelah sebuah aksi berhasil. */
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
 import { cx } from '@/lib/cx';
 import { useI18n } from './i18n';
@@ -6,10 +7,6 @@ import { CloseIcon } from './icons';
 const ToastContext = createContext(null);
 const DURATION_MS = 4500;
 
-/**
- * Pesan singkat setelah aksi (terbit, hapus, simpan). Melayang di bawah layar,
- * jadi daftar arsip tidak ikut bergeser setiap kali ada pesan.
- */
 export function ToastProvider({ children }) {
   const { t } = useI18n();
   const [toasts, setToasts] = useState([]);
@@ -21,7 +18,7 @@ export function ToastProvider({ children }) {
     (message, tone = 'info') => {
       nextId.current += 1;
       const id = nextId.current;
-      // Paling banyak tiga sekaligus; yang paling lama keluar duluan.
+
       setToasts((list) => [...list.slice(-2), { id, message, tone }]);
       setTimeout(() => dismiss(id), DURATION_MS);
     },
@@ -31,7 +28,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={show}>
       {children}
-      {/* Wadah live region selalu ada, supaya pesan yang masuk ikut dibacakan pembaca layar. */}
+
       <div
         aria-live="polite"
         className="pointer-events-none fixed inset-x-4 bottom-5 z-50 flex flex-col items-center gap-2 min-[720px]:inset-x-auto min-[720px]:right-6 min-[720px]:items-end"
@@ -42,7 +39,6 @@ export function ToastProvider({ children }) {
             role={toast.tone === 'error' ? 'alert' : 'status'}
             className={cx(
               'pointer-events-auto flex w-full max-w-[420px] animate-fade-in items-start gap-3 rounded-lg px-4 py-3 text-[0.86rem] leading-snug',
-              // Satu-satunya bayangan di dasbor: toast memang melayang di atas halaman.
               'shadow-[0_10px_30px_rgb(27_47_33/0.28)]',
               toast.tone === 'error' ? 'bg-[#7d2f25] text-paper' : 'bg-forest-deep text-cream',
             )}

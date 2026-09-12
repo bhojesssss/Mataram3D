@@ -1,3 +1,4 @@
+/** Halaman daftar arsip: pencarian, filter status dan kategori, serta aksi tiap kartu. */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { cx } from '@/lib/cx';
@@ -15,7 +16,6 @@ import { useApiError } from '../session';
 import { useToast } from '../toast';
 import { FOCUS, INPUT, Notice, PRIMARY, SECONDARY } from '../ui';
 
-/** Nilai filter "semua kategori". Bukan label: labelnya diterjemahkan, nilainya tidak. */
 const ALL = '__all__';
 
 const GRID = 'grid list-none grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-5';
@@ -111,7 +111,7 @@ export default function RecordsPage() {
     <Wrap className="pt-[clamp(24px,4vw,44px)]">
       <header>
         <Eyebrow>Royal Archive</Eyebrow>
-        {/* Tombol tetap sebaris dengan judul di layar sempit, supaya kartu pertama naik ke layar. */}
+
         <div className="flex items-end justify-between gap-4">
           <h1 className="min-w-0 font-display text-[clamp(1.85rem,3.6vw,2.9rem)] font-light leading-none text-forest">
             {t('list.title')}
@@ -182,11 +182,7 @@ export default function RecordsPage() {
           </div>
 
           <div className="flex flex-col gap-3 min-[641px]:flex-row min-[641px]:flex-wrap min-[641px]:items-center min-[641px]:gap-x-4">
-            {/*
-              Di layar sempit chip jadi satu rel yang bisa digeser, menempel ke tepi
-              layar (margin negatif selebar padding Wrap), bukan tumpukan dua baris
-              yang mendorong kartu pertama keluar dari layar.
-            */}
+
             <ul
               aria-label={t('list.categoryGroup')}
               className="rail-scroll -mx-[clamp(20px,5vw,40px)] flex list-none gap-[7px] overflow-x-auto px-[clamp(20px,5vw,40px)] pb-1 min-[641px]:mx-0 min-[641px]:flex-wrap min-[641px]:overflow-visible min-[641px]:px-0 min-[641px]:pb-0"
@@ -249,8 +245,7 @@ export default function RecordsPage() {
               <RecordCard
                 key={record.id}
                 record={record}
-                // Nomor urut otomatis: posisi di daftar lengkap (backend mengurutkan dari yang
-                // paling awal ditambahkan), bukan di hasil filter, jadi nomornya tidak berubah saat menyaring.
+
                 number={records.indexOf(record) + 1}
                 busy={busyId === record.id}
                 confirming={confirmId === record.id}
@@ -267,7 +262,6 @@ export default function RecordsPage() {
   );
 }
 
-/** Kerangka kartu selama daftar dimuat, dengan bentuk yang sama seperti kartu sungguhan. */
 function SkeletonGrid({ label }) {
   return (
     <>

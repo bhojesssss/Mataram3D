@@ -1,3 +1,4 @@
+/** Kartu satu arsip di halaman daftar. */
 import { Link } from 'react-router-dom';
 import { cx } from '@/lib/cx';
 import { Frame } from '@/components/ui/Frame';
@@ -5,14 +6,6 @@ import { useI18n } from '../i18n';
 import { ExternalIcon, PencilIcon, TrashIcon } from '../icons';
 import { DANGER_ICON, DANGER_SOLID, FOCUS, ICON_BUTTON, SMALL_GHOST, Switch } from '../ui';
 
-/**
- * Satu arsip di grid dasbor. Bagian atasnya meniru kartu di Royal Archive
- * (gambar, kategori, era, judul) supaya admin langsung mengenali kartunya;
- * bagian bawah berisi kontrol: saklar terbit dan tiga aksi.
- *
- * Draft tampil pudar dengan garis putus-putus, jadi status bisa dipindai tanpa
- * membaca label satu per satu.
- */
 export function RecordCard({ record, number, busy, confirming, onTogglePublish, onAskDelete, onCancelDelete, onDelete }) {
   const { t } = useI18n();
   const editPath = `/admin/records/${record.id}`;
@@ -86,11 +79,7 @@ export function RecordCard({ record, number, busy, confirming, onTogglePublish, 
           </>
         ) : (
           <>
-            {/*
-              Label di samping saklar hanya penegas: status sudah tampil di atas gambar dan
-              saklarnya berlabel untuk pembaca layar. Di kartu sempit (<280px, mis. 4 kolom
-              di ±1170px) label disembunyikan utuh, bukan terpotong jadi "Publis…" (EN).
-            */}
+
             <span className="flex min-w-0 items-center gap-2.5 pl-1">
               <Switch
                 checked={published}

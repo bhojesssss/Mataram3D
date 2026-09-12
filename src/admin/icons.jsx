@@ -1,5 +1,4 @@
-/** Ikon garis dasbor. Gayanya sama dengan components/ui/Icons.jsx: stroke 1.5, mewarisi currentColor. */
-
+/** Ikon SVG yang dipakai dasbor. */
 const base = {
   viewBox: '0 0 24 24',
   fill: 'none',

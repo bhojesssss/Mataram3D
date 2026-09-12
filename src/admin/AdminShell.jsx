@@ -1,3 +1,4 @@
+/** Kerangka tampilan dasbor: header, pengalih bahasa, dan area konten. */
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cx } from '@/lib/cx';
@@ -9,19 +10,11 @@ import { useSession } from './session';
 import { ToastProvider } from './toast';
 import { FOCUS } from './ui';
 
-/**
- * Kerangka dasbor. Bar atas hijau tua memisahkan "ruang kerja" dari situs publik
- * yang terang, dengan roset dan wordmark yang sama supaya tetap terasa Mataram.
- * Tingginya tetap 64px (h-16): bar aksi form menempel tepat di bawahnya.
- */
 export function AdminShell({ children }) {
   const { admin, signOut } = useSession();
   const { t } = useI18n();
   const { pathname } = useLocation();
 
-  // SiteLayout yang biasanya menggulir ke atas saat pindah halaman tidak membungkus admin.
-  // Badan blok, bukan `() => window.scrollTo(…)`: nilai balik effect dianggap React
-  // sebagai fungsi cleanup, dan tidak semua lingkungan mengembalikan undefined di sini.
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
@@ -29,10 +22,7 @@ export function AdminShell({ children }) {
   return (
     <ToastProvider>
       <header className="sticky top-0 z-30 h-16 bg-forest-deep text-cream">
-        {/*
-          Di ≤400px jarak antarelemen dirapatkan: "Sign out" (EN) lebih lebar dari
-          "Keluar", dan tanpa itu wordmark terdesak beberapa piksel di bahasa Inggris.
-        */}
+
         <Wrap className="flex h-full items-center justify-between gap-3 max-[400px]:gap-2">
           <Link to="/admin" className={cx('inline-flex min-w-0 items-center gap-2.5 rounded-md whitespace-nowrap no-underline', FOCUS)}>
             <span className="text-gold">

@@ -1,18 +1,8 @@
+/** Gaya dan komponen dasar yang dipakai lintas halaman dasbor. */
 import { cx } from '@/lib/cx';
 
-/*
-  Atom dasbor. Palet dan font sama dengan situs; bedanya, kontrol aplikasi
-  memakai huruf biasa (bukan kapital berjarak lebar seperti tombol situs)
-  karena dibaca berkali-kali, bukan sekali lewat.
-*/
-
-/**
- * Merah bata, satu-satunya warna di luar palet situs: pesan kesalahan butuh
- * warna yang tidak bisa tertukar dengan emas atau hijau. ±6:1 di atas paper.
- */
 export const ERROR_TEXT = 'text-[#9b3b2f]';
 
-/** Cincin fokus keyboard yang sama untuk semua kontrol. */
 export const FOCUS = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold';
 
 export const INPUT = cx(
@@ -63,7 +53,6 @@ export function PrimaryButton({ type = 'button', className, ...rest }) {
   return <button type={type} className={cx(PRIMARY, className)} {...rest} />;
 }
 
-/** id elemen penjelas untuk aria-describedby: pesan error menggantikan petunjuk. */
 export const describedBy = (id, error, hint) => (error ? `${id}-error` : hint ? `${id}-hint` : undefined);
 
 export function Field({ id, label, hint, error, count, max, children }) {
@@ -103,7 +92,6 @@ export function FieldMessage({ id, error, hint }) {
   return null;
 }
 
-/** Kartu pengelompok isian form: judul bagian dan penjelasan satu baris. */
 export function Section({ title, description, children, className }) {
   return (
     <section className={cx('rounded-lg border border-forest/15 bg-paper p-[clamp(18px,2.4vw,26px)]', className)}>
@@ -116,7 +104,6 @@ export function Section({ title, description, children, className }) {
   );
 }
 
-/** Saklar on/off. Nama aksesibelnya dari `label` atau `labelledBy`; statusnya dibawa aria-checked. */
 export function Switch({ id, checked, onChange, disabled, label, labelledBy, describedBy: describedById }) {
   return (
     <button

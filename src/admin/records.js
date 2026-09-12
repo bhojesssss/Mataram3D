@@ -1,13 +1,8 @@
+/** Bentuk data arsip di form: nilai awal, konversi ke payload API, dan validasinya. */
 import { categories } from '@/data/archive';
 
-/**
- * Kategori yang boleh disimpan: chip filter Royal Archive tanpa "All". Diambil
- * dari data situs supaya urutan dan ejaannya tidak bisa berbeda; backend
- * memakai enum yang sama (People, Places, Events, Artifacts, Documents).
- */
 export const CATEGORIES = categories.filter((category) => category !== 'All');
 
-/** Sama dengan batas DTO backend. */
 export const LIMITS = { title: 200, description: 1000, era: 60 };
 
 export const EMPTY_RECORD = {
@@ -44,10 +39,6 @@ export function toPayload(values) {
   };
 }
 
-/**
- * Aturan yang sama dengan backend, supaya kesalahan tertangkap sebelum request
- * dikirim. Pesannya lewat `t`, jadi ikut berganti saat bahasa dasbor diganti.
- */
 export function validateRecord(values, t) {
   const errors = {};
   const title = values.title.trim();
@@ -74,7 +65,6 @@ export function validateRecord(values, t) {
   return errors;
 }
 
-/** Backend menolak URL tanpa https dan tanpa domain bertitik; di sini dicek lebih awal. */
 function isHttpsUrl(value) {
   try {
     const url = new URL(value);

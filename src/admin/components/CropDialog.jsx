@@ -1,13 +1,13 @@
+/** Jendela untuk memilih bagian foto yang tampil di kartu, dengan rasio 16:10. */
 import { useEffect, useRef, useState } from 'react';
 import { cx } from '@/lib/cx';
 import { useI18n } from '../i18n';
 import { FOCUS, PrimaryButton, SECONDARY, SMALL_GHOST } from '../ui';
 
-/** Rasio bidang gambar kartu. Pratinjau, kartu dasbor, dan hasil potongan memakai rasio yang sama. */
 export const CARD_RATIO = 16 / 10;
-/** Lebar hasil. Tetap tajam di kartu terlebar pada layar 2×, dan jauh di bawah batas 2 MB server. */
+
 const OUTPUT_WIDTH = 1600;
-/** Hasil tidak boleh lebih sempit dari ini supaya tidak buram. Sekaligus menentukan zoom maksimum. */
+
 export const MIN_OUTPUT_WIDTH = 800;
 const MAX_ZOOM = 3;
 const QUALITY = 0.85;
@@ -15,14 +15,6 @@ const KEY_STEP = 12;
 
 const toBlob = (canvas, type) => new Promise((resolve) => canvas.toBlob(resolve, type, QUALITY));
 
-/**
- * Jendela untuk memilih bagian foto yang tampil di kartu, sebelum diunggah.
- *
- * Foto dengan rasio apa pun ditaruh di bingkai 16:10 dan bisa digeser/diperbesar.
- * Hasilnya digambar ulang ke canvas (maks. 1600×1000) lalu dikodekan ke WebP, jadi
- * yang tersimpan di storage selalu pas dengan kartu dan kecil ukurannya, apa pun
- * ukuran foto aslinya. Situs tidak perlu memotong lagi secara acak.
- */
 export function CropDialog({ image, onCancel, onConfirm }) {
   const { t } = useI18n();
   const dialogRef = useRef(null);
@@ -36,10 +28,10 @@ export function CropDialog({ image, onCancel, onConfirm }) {
   const iw = image.naturalWidth;
   const ih = image.naturalHeight;
   const frameHeight = frameWidth / CARD_RATIO;
-  // Skala "cover": gambar menutup bingkai penuh tanpa sisi kosong.
+
   const base = frameWidth ? Math.max(frameWidth / iw, frameHeight / ih) : 0;
   const scale = base * zoom;
-  // Zoom dibatasi supaya potongan tidak lebih sempit dari MIN_OUTPUT_WIDTH piksel foto asli.
+
   const maxZoom = Math.max(1, Math.min(MAX_ZOOM, Math.min(iw, ih * CARD_RATIO) / MIN_OUTPUT_WIDTH));
 
   const clamp = (x, y, s) => ({
@@ -64,7 +56,6 @@ export function CropDialog({ image, onCancel, onConfirm }) {
     return () => observer.disconnect();
   }, []);
 
-  // Bingkai baru terukur (saat dibuka, atau layar diputar): mulai lagi dari tengah.
   useEffect(() => {
     if (!frameWidth) return;
     setZoom(1);
@@ -74,7 +65,7 @@ export function CropDialog({ image, onCancel, onConfirm }) {
   function applyZoom(next) {
     const nextZoom = Math.min(maxZoom, Math.max(1, next));
     const nextScale = base * nextZoom;
-    // Titik di tengah bingkai tetap di tengah saat diperbesar atau diperkecil.
+
     const cx = (frameWidth / 2 - offset.x) / scale;
     const cy = (frameHeight / 2 - offset.y) / scale;
     setZoom(nextZoom);
@@ -107,8 +98,6 @@ export function CropDialog({ image, onCancel, onConfirm }) {
 
   const pointer = {
     onPointerDown: (event) => {
-      // Capture supaya geseran tetap terbaca walau kursor keluar bingkai. Bisa gagal kalau
-      // pointer sudah tidak aktif; itu bukan alasan membatalkan geseran.
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
       } catch {}
@@ -140,14 +129,14 @@ export function CropDialog({ image, onCancel, onConfirm }) {
     canvas.width = width;
     canvas.height = height;
     const context = canvas.getContext('2d');
-    // Latar kertas untuk PNG transparan, supaya tidak berubah hitam kalau dikodekan ke JPEG.
+
     context.fillStyle = '#f7f4ec';
     context.fillRect(0, 0, width, height);
     context.imageSmoothingQuality = 'high';
     context.drawImage(image, sx, sy, sw, sh, 0, 0, width, height);
 
     let blob = await toBlob(canvas, 'image/webp');
-    // Browser yang belum bisa menulis WebP diam-diam menghasilkan PNG besar; pakai JPEG saja.
+
     if (!blob || blob.type !== 'image/webp') blob = await toBlob(canvas, 'image/jpeg');
     onConfirm(blob);
   }

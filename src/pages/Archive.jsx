@@ -20,7 +20,6 @@ export default function Archive() {
   const inputRef = useRef(null);
   const { status, records } = useArchiveRecords();
 
-  /** Teks yang dicari untuk tiap record, dihitung sekali per koleksi. */
   const haystacks = useMemo(
     () => new Map(records.map((record) => [record, `${record.cat} ${record.era} ${record.title} ${record.sub}`.toLowerCase()])),
     [records],
@@ -130,7 +129,6 @@ export default function Archive() {
               ))}
             </div>
           ) : records.length === 0 ? (
-            // Backend menjawab, tapi belum ada arsip yang diterbitkan dari dasbor.
             <div className="rounded-lg border border-dashed border-forest/25 px-5 py-[clamp(50px,7vw,110px)] text-center">
               <p className="mb-3 font-display text-[clamp(1.35rem,2.4vw,2.1rem)] italic text-forest">
                 The collection is being catalogued.
@@ -174,10 +172,8 @@ function RecordCard({ record }) {
     </article>
   );
 
-  // Record statis (cadangan) tidak punya artikel tujuan, jadi tetap kartu biasa.
   if (!record.href) return card;
 
-  // Blog hanya pratinjau; isi lengkapnya ada di artikel asli di situs lain.
   return (
     <a
       href={record.href}

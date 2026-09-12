@@ -1,3 +1,4 @@
+/** Penyedia bahasa dasbor (ID dan EN) beserta tombol pengalihnya. */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { cx } from '@/lib/cx';
 import { messages } from './messages';
@@ -10,13 +11,11 @@ export const LANGUAGES = [
   { code: 'en', label: 'EN', name: 'English' },
 ];
 
-/** Pilihan terakhir admin; bawaannya Indonesia, sama dengan <html lang="id"> situs. */
 export function initialLang() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved && saved in messages) return saved;
   } catch {
-    // Penyimpanan diblokir (mode privat ketat): pakai bawaan saja.
   }
   return 'id';
 }
@@ -26,12 +25,10 @@ function lookup(dictionary, key) {
 }
 
 function translate(lang, key, params) {
-  // Kunci yang lupa diterjemahkan jatuh ke bahasa Indonesia, lalu ke nama kuncinya, bukan ke teks kosong.
   const value = lookup(messages[lang], key) ?? lookup(messages.id, key) ?? key;
   return typeof value === 'function' ? value(params ?? {}) : value;
 }
 
-/** Untuk bagian yang dirender sebelum provider ada (layar muat dan error boundary AdminEntry). */
 export function bootText(key) {
   return translate(initialLang(), key);
 }
@@ -46,11 +43,9 @@ export function I18nProvider({ children }) {
     try {
       localStorage.setItem(STORAGE_KEY, next);
     } catch {
-      // Tetap berganti di sesi ini walau tidak bisa diingat.
     }
   }, []);
 
-  // Pembaca layar memilih pelafalan dari atribut lang dokumen. Dikembalikan saat keluar dari /admin.
   useEffect(() => {
     const previous = document.documentElement.lang;
     document.documentElement.lang = lang;
@@ -71,10 +66,6 @@ export function useI18n() {
   return value;
 }
 
-/**
- * Tombol ID/EN. Lebarnya tetap berapa pun bahasa aktifnya, jadi bar atas tidak
- * bergeser saat berganti. `tone="dark"` untuk bar atas hijau, `light` untuk halaman login.
- */
 export function LanguageSwitch({ tone = 'dark', className }) {
   const { lang, setLang, t } = useI18n();
 

@@ -1,10 +1,7 @@
+/** Pintu masuk /admin: memuat dasbor sebagai chunk terpisah dan menangani kegagalan muat. */
 import { Component, lazy, Suspense } from 'react';
 import { bootText } from './i18n';
 
-/*
-  Pintu masuk /admin/*. Seluruh kode dasbor ada di chunk terpisah yang baru
-  diunduh saat URL admin dibuka, jadi pengunjung situs tidak ikut memuatnya.
-*/
 const AdminApp = lazy(() => import('./AdminApp'));
 
 export default function AdminEntry() {
@@ -23,10 +20,6 @@ export default function AdminEntry() {
   );
 }
 
-/**
- * Chunk gagal diunduh (mis. versi lama terbuka saat deploy baru) atau error saat
- * render: tampilkan jalan keluar, bukan layar kosong.
- */
 class AdminErrorBoundary extends Component {
   state = { failed: false };
 

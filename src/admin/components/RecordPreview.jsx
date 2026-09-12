@@ -1,20 +1,13 @@
+/** Pratinjau kartu seperti tampilannya di halaman Royal Archive. */
 import { cx } from '@/lib/cx';
 import { Frame } from '@/components/ui/Frame';
 import { useI18n } from '../i18n';
 
-/**
- * Pratinjau satu kartu Royal Archive saat mengisi form.
- *
- * Class-nya disalin dari RecordCard di pages/Archive.jsx (komponen itu tidak
- * diekspor, dan halaman situs sengaja tidak diubah). Kalau tampilan kartu di
- * situs berubah, salinan ini ikut disesuaikan.
- */
 export function RecordPreview({ values }) {
   const { t } = useI18n();
   const empty = (value) => !value && 'opacity-45';
 
   return (
-    // Isinya duplikat field form di sebelahnya, jadi disembunyikan dari pembaca layar.
     <article aria-hidden="true" className="overflow-hidden rounded-lg border border-forest/18 bg-paper">
       <Frame
         key={values.imageUrl || 'empty'}

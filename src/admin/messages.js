@@ -1,11 +1,4 @@
-/**
- * Semua teks dasbor dalam dua bahasa, disusun berpasangan per kunci supaya
- * mudah dibandingkan dan tidak ada yang tertinggal.
- *
- * Nilai boleh berupa fungsi untuk teks yang memuat angka atau nama (dan bentuk
- * jamak bahasa Inggris). Nama kategori (People, Places, …) sengaja tidak
- * diterjemahkan: itu label yang sama persis dengan chip di halaman Royal Archive.
- */
+/** Seluruh teks dasbor dalam bahasa Indonesia dan Inggris. */
 export const messages = {
   id: {
     common: {
@@ -187,7 +180,6 @@ export const messages = {
       unexpected: 'Terjadi kesalahan yang tidak terduga.',
     },
   },
-
   en: {
     common: {
       language: 'Language',

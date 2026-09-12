@@ -17,7 +17,6 @@ import AdminEntry from '@/admin/AdminEntry';
 export default function App() {
   return (
     <Routes>
-      {/* Dasbor admin: di luar SiteLayout, tanpa navbar dan footer situs. */}
       <Route path="/admin/*" element={<AdminEntry />} />
       <Route element={<SiteLayout />}>
         <Route index element={<Home />} />
