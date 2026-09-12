@@ -12,6 +12,11 @@ export default defineConfig({
   server: {
     port: 5173,
     open: false,
+    watch: {
+      // OneDrive locks large model files mid-sync, which crashes the file
+      // watcher (EBUSY); public assets don't need HMR anyway.
+      ignored: ['**/public/models/**'],
+    },
   },
   build: {
     target: 'es2020',

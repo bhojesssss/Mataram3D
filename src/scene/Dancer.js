@@ -1,48 +1,41 @@
 import * as THREE from 'three';
-import { jaritMaps, fabricMaps, applyMaps } from './textures.js';
-import { JOINTS, POSES, samplePose, makePoseBuffer } from './dance.js';
-import {
-  StatueRig,
-  BONES,
-  REGION,
-  REGION_COUNT,
-  computeRegions,
-  applyRegionGroups,
-  generateCylindricalUVs,
-} from './statueRig.js';
+import { fabricMaps, applyMaps } from './textures.js';
 
 /**
  * The dancer in the pendopo.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * The body is referensi/dancin_statue.glb, not primitives.
+ * The body is public/models/dancer_detail.glb — a Meshy-generated figure that
+ * arrives fully made: baked clothing textures, a 27-joint mixamorig skeleton
+ * and its own ~10s dance clip.
  *
- * The earlier figure was assembled from cylinders and spheres, and no amount of
- * proportion-tuning was going to make that read as a person. This loads the
- * supplied statue instead and fits a skeleton to it at runtime (see statueRig.js)
- * — the mesh arrives with no bones, no skin and no animation, so keeping the
- * scroll-driven dance meant rigging it rather than just placing it.
+ * This replaces the earlier pipeline that took an unrigged statue mesh and
+ * fitted a skeleton to it at runtime (statueRig.js + dance.js). That existed
+ * because the statue had no bones; this model does. The clip is not played,
+ * though: she holds a single frame of it (POSE_TIME), chosen to match the
+ * reference photograph of a bedhaya dancer mid-phrase. The selendang ribbon
+ * stays time-driven, so the held pose still reads as alive.
  *
- * ── The sculpted pose is the anchor ─────────────────────────────────────────
- * The statue already stands in a good dance pose: left arm raised, right extended.
- * dance.js poses are applied as deltas measured *from pose 2* — the raised-
- * selendang pose it most resembles — so at that beat the figure sits in exactly
- * the shape it was sculpted in, and the rest of the phrase moves around it.
- *
- * Deltas are damped by DAMP. Two-bone linear weights cannot take a 90° shoulder
- * swing without pinching, and Javanese court dance is small-amplitude anyway.
+ * Two procedural pieces survive from the old dancer, because the GLB has
+ * neither: the trailing selendang ribbon (pinned to the model's LeftHand bone)
+ * and the blob contact shadow (she is excluded from the sun's shadow map for
+ * performance — see the note on _buildContactShadow).
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const SKIN = '#C89A72';
-const KEBAYA = '#2FBF4F';
 const SELENDANG = '#F5326E';
-const HAIR = '#171310';
 
-/** How much of dance.js's range survives onto the fitted rig. */
-const DAMP = 0.5;
+const MODEL_URL = '/models/dancer_detail.glb';
 
-const MODEL_URL = '/models/dancer.glb';
+/** Target height in metres; the GLB is normalised to this on load. */
+const HEIGHT = 1.68;
+
+/**
+ * Where in the baked clip she is frozen, in seconds. The clip is never played —
+ * this frame was picked because it matches the reference photograph: right arm
+ * extended, left hand carrying the selendang, weight settled in mendhak.
+ */
+const POSE_TIME = 0.4;
 
 export class Dancer extends THREE.Group {
   constructor() {
@@ -50,9 +43,6 @@ export class Dancer extends THREE.Group {
     this.name = 'dancer';
     this._disposables = [];
     this.ready = false;
-
-    this._pose = makePoseBuffer();
-    this._delta = Object.fromEntries(BONES.map((b) => [b.name, [0, 0, 0]]));
     this.phrase = 0;
 
     this._buildMaterials();
@@ -75,66 +65,62 @@ export class Dancer extends THREE.Group {
     const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
     const gltf = await new GLTFLoader().loadAsync(MODEL_URL);
 
-    let source = null;
-    gltf.scene.traverse((o) => {
-      if (o.isMesh && !source) source = o;
+    const model = gltf.scene;
+
+    // Normalise from the bind pose: scale to HEIGHT, feet on y=0, centred on
+    // the group origin. The group itself is placed by Scene at deck height.
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    model.scale.setScalar(HEIGHT / size.y);
+    model.updateMatrixWorld(true);
+    box.setFromObject(model);
+    model.position.set(
+      -(box.min.x + box.max.x) / 2,
+      -box.min.y,
+      -(box.min.z + box.max.z) / 2,
+    );
+
+    model.traverse((o) => {
+      if (o.isMesh) {
+        o.castShadow = false; // see the contact-shadow note below
+        o.receiveShadow = true;
+        o.frustumCulled = false; // skinned verts move outside the bind bounds
+      }
     });
-    if (!source) throw new Error('no mesh in ' + MODEL_URL);
 
-    // Detach from the glTF's own node transforms — the rig works in its own
-    // normalised space and applies scale and orientation itself.
-    const geo = source.geometry.clone();
-    geo.applyMatrix4(source.matrixWorld);
+    this.add(model);
+    this.body = model;
 
-    this.rig = new StatueRig(geo, 1.68);
-    // Must come before the materials are attached: the export's own UVs cannot
-    // tile the batik, so they are replaced with a cylindrical wrap.
-    generateCylindricalUVs(this.rig);
-    const regions = computeRegions(this.rig);
-    applyRegionGroups(this.rig, regions);
+    // Two clips ship in the file; the short one is a rest pose. Play the dance.
+    const clip = gltf.animations.reduce((a, b) => (a.duration >= b.duration ? a : b));
 
-    const mats = new Array(REGION_COUNT);
-    mats[REGION.SKIRT] = this.mJarit;
-    mats[REGION.KEBAYA] = this.mKebaya;
-    mats[REGION.SKIN] = this.mSkin;
-    mats[REGION.HAIR] = this.mHair;
+    // The clip carries root motion that walks her metres across the deck — and
+    // out of the interior camera framing, which is composed around her holding
+    // the centre. Pin the hips' XZ to their first keyframe so she dances in
+    // place; Y is kept, it carries the crouches.
+    for (const track of clip.tracks) {
+      if (!track.name.endsWith('Hips.position')) continue;
+      const v = track.values;
+      for (let i = 3; i < v.length; i += 3) {
+        v[i] = v[0];
+        v[i + 2] = v[2];
+      }
+    }
+    this._mixer = new THREE.AnimationMixer(model);
+    this._mixer.clipAction(clip).play();
+    // Frozen, not played: she holds one pose (see POSE_TIME).
+    this._mixer.setTime(POSE_TIME);
 
-    const body = new THREE.Mesh(geo, mats);
-    body.castShadow = false; // see the contact-shadow note below
-    body.receiveShadow = true;
-    body.frustumCulled = false; // vertices are rewritten every frame
-    this.add(body);
-    this.body = body;
+    // The selendang hangs from her hand; both ends track these bones. The GLB
+    // names them mixamorig:LeftHand etc., but GLTFLoader strips the colon —
+    // ':' is reserved in animation track paths (PropertyBinding.sanitizeNodeName).
+    this._handBone = model.getObjectByName('mixamorigLeftHand');
+    this._hipBone = model.getObjectByName('mixamorigHips');
 
-    this._handWorld = new THREE.Vector3();
     this.ready = true;
   }
 
   _buildMaterials() {
-    const fabric = fabricMaps();
-
-    this.mSkin = this._track(
-      new THREE.MeshStandardMaterial({
-        color: new THREE.Color(SKIN),
-        roughness: 0.68,
-        metalness: 0,
-        flatShading: false,
-      }),
-    );
-
-    this.mKebaya = this._track(
-      applyMaps(
-        new THREE.MeshStandardMaterial({
-          color: new THREE.Color(KEBAYA),
-          roughness: 1,
-          metalness: 0,
-        }),
-        fabric,
-        [3, 4],
-        0.7,
-      ),
-    );
-
     this.mSelendang = this._track(
       applyMaps(
         new THREE.MeshStandardMaterial({
@@ -143,29 +129,10 @@ export class Dancer extends THREE.Group {
           metalness: 0.04,
           side: THREE.DoubleSide,
         }),
-        fabric,
+        fabricMaps(),
         [2, 8],
         0.35,
       ),
-    );
-
-    // The statue's skirt has no UVs worth trusting, so the batik is projected
-    // by triplanar-ish repeat rather than by the mesh's own mapping.
-    this.mJarit = this._track(
-      applyMaps(
-        new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0 }),
-        jaritMaps(),
-        [3, 4],
-        0.85,
-      ),
-    );
-
-    this.mHair = this._track(
-      new THREE.MeshStandardMaterial({
-        color: new THREE.Color(HAIR),
-        roughness: 0.4,
-        metalness: 0.02,
-      }),
     );
   }
 
@@ -187,7 +154,7 @@ export class Dancer extends THREE.Group {
     const ribbon = new THREE.Mesh(geo, this.mSelendang);
     ribbon.castShadow = false;
     ribbon.frustumCulled = false;
-    ribbon.visible = false; // until the rig exists and can supply a hand
+    ribbon.visible = false; // until the model exists and can supply a hand
     this.add(ribbon);
     this.selendang = ribbon;
 
@@ -247,82 +214,34 @@ export class Dancer extends THREE.Group {
       this._shadowRings.push(mat);
     }
 
+    group.scale.set(1.15, 1, 1);
     this.add(group);
     this.contactShadow = group;
   }
 
   /**
-   * Converts a sampled dance.js pose into bone deltas for the fitted rig.
-   *
-   * dance.js writes rotations for a figure whose limbs hang along -Y; the statue's
-   * do not. Subtracting pose 2 turns those absolute rotations into differences,
-   * which are meaningful against any rest pose.
-   */
-  _toDeltas(pose) {
-    const ref = POSES[2];
-    const ZERO = [0, 0, 0];
-
-    for (const name of BONES.map((b) => b.name)) {
-      // dance.js calls the root `pelvis`; the rig calls it `hips`.
-      const src = name === 'hips' ? 'pelvis' : name;
-      const d = this._delta[name];
-
-      if (!JOINTS.includes(src)) {
-        d[0] = d[1] = d[2] = 0;
-        continue;
-      }
-
-      const now = pose[src] ?? ZERO;
-      const base = ref[src] ?? ZERO;
-      // Z is the abduction axis and dance.js mirrors it on the right so one
-      // positive number opens both arms outward. The rig has no such convention,
-      // so the flip is applied here.
-      const sign = name.endsWith('R') ? -1 : 1;
-      d[0] = (now[0] - base[0]) * DAMP;
-      d[1] = (now[1] - base[1]) * DAMP;
-      d[2] = (now[2] - base[2]) * DAMP * sign;
-    }
-
-    return this._delta;
-  }
-
-  /**
    * @param {number} phrase   scroll position within the dance, 0→1 per cycle
-   * @param {number} elapsed  seconds, for the motion that must not freeze
+   *                          (kept for API compatibility; the baked clip is
+   *                          clock-driven, not scroll-driven)
+   * @param {number} elapsed  seconds since the scene started
    */
   update(phrase, elapsed) {
     this.phrase = phrase;
     if (!this.ready) return;
 
-    // Scroll sets the choreography; time adds a breath on top, so a reader who
-    // stops scrolling sees a dancer holding a pose rather than a frozen model.
-    samplePose(phrase, this._pose);
-    const breath = Math.sin(elapsed * 0.9) * 0.006;
-    this._pose.lift += breath;
-    this._pose.chest[0] += breath * 1.6;
-    this._pose.neck[2] += Math.sin(elapsed * 0.55 + 1.1) * 0.012;
-
-    this.rig.apply(this._toDeltas(this._pose));
-
-    // No leg bones — the jarit is rigid, as a real one is — so mendhak is
-    // expressed by lowering the whole figure rather than by bending knees.
-    const depth = -this._pose.lift;
-    this.body.position.y = this._pose.lift * 0.8;
-
     this.updateMatrixWorld(true);
     this._updateSelendang(elapsed);
-
-    const spread = 1.25 - depth * 0.9;
-    this.contactShadow.scale.set(spread, 1, spread * 0.86);
-    for (const m of this._shadowRings) m.opacity = 0.055 + depth * 0.2;
   }
 
   _updateSelendang(elapsed) {
-    // Held in the raised hand, as in the reference photograph.
-    this.rig.boneWorld('handL', this._sHand);
-    this._sHand.y += this.body.position.y;
-    this.rig.boneWorld('hips', this._sHip);
-    this._sHip.y += this.body.position.y;
+    if (!this._handBone || !this._hipBone) return;
+
+    // Bone positions come out in world space; the ribbon's vertices live in the
+    // group's local space, so both ends are pulled back through worldToLocal.
+    this._handBone.getWorldPosition(this._sHand);
+    this.worldToLocal(this._sHand);
+    this._hipBone.getWorldPosition(this._sHip);
+    this.worldToLocal(this._sHip);
     this._sHip.x -= 0.14;
     this._sHip.z += 0.1;
 
@@ -330,7 +249,7 @@ export class Dancer extends THREE.Group {
 
     const span = this._sHand.distanceTo(this._sHip);
     const targetSag = 0.5 - span * 0.22;
-    // Eased: cloth has inertia, and scrubbing the scroll teleports the hand.
+    // Eased: cloth has inertia, and the hand teleports on animation loop.
     this._sag += (targetSag - this._sag) * 0.12;
 
     this._handVel.subVectors(this._sHand, this._handPrev);
@@ -393,6 +312,18 @@ export class Dancer extends THREE.Group {
   dispose() {
     for (const d of this._disposables) d.dispose?.();
     this._disposables.length = 0;
-    this.body?.geometry.dispose();
+
+    this._mixer?.stopAllAction();
+    this.body?.traverse((o) => {
+      if (!o.isMesh) return;
+      o.geometry.dispose();
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        m.map?.dispose();
+        m.normalMap?.dispose();
+        m.metalnessMap?.dispose();
+        m.roughnessMap?.dispose();
+        m.dispose();
+      }
+    });
   }
 }

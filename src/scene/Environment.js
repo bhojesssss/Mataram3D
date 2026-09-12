@@ -39,8 +39,27 @@ function mulberry32(seed) {
   };
 }
 
-/** Draws a mountain profile into an alpha canvas. */
-function ridgeTexture(seed, peaks, jag) {
+/**
+ * Draws a mountain profile into an alpha canvas.
+ *
+ * Earlier version summed random sines, which at low frequency produced one huge
+ * smooth dome spanning the whole sky and, with per-pixel jitter, a sawtooth edge.
+ * Neither reads as a mountain. This version composes the silhouette the way the
+ * real skyline north of the kraton is composed: rolling forested foothills with
+ * distinct stratovolcano cones rising out of them. Cone flanks use a power-curve
+ * falloff, which gives the concave profile characteristic of Merapi, and the
+ * summit is softly truncated rather than needle-sharp.
+ *
+ * @param {number} seed
+ * @param {{u:number,h:number,w:number}[]} cones  volcano cones: `u` horizontal
+ *        position 0..1, `h` height as a fraction of canvas height, `w` half-width
+ *        as a fraction of canvas width
+ * @param {number} base      baseline of the range, fraction of height from top
+ * @param {number} foothill  amplitude of the rolling hills under the cones
+ * @param {number} rough     amplitude of fine surface relief (kept smooth — it is
+ *        interpolated value noise, not per-pixel jitter, so no sawtooth)
+ */
+function ridgeTexture(seed, cones, base, foothill, rough) {
   const w = 2048;
   const h = 512;
   const c = document.createElement('canvas');
@@ -49,24 +68,35 @@ function ridgeTexture(seed, peaks, jag) {
   const g = c.getContext('2d');
   const rnd = mulberry32(seed);
 
+  // Cosine-interpolated value noise over a coarse node array — smooth undulation
+  // with no high-frequency artefacts.
+  const nodes = (n) => Array.from({ length: n }, () => rnd());
+  const noiseAt = (ns, t) => {
+    const x = t * (ns.length - 1);
+    const i = Math.floor(x);
+    const s = (1 - Math.cos((x - i) * Math.PI)) / 2;
+    return ns[i] * (1 - s) + ns[Math.min(i + 1, ns.length - 1)] * s;
+  };
+  const coarse = nodes(18);
+  const fine = nodes(80);
+
   g.clearRect(0, 0, w, h);
   g.fillStyle = '#ffffff';
   g.beginPath();
   g.moveTo(0, h);
 
-  // Sum a few sines with random phase, then add fine jitter for rock texture.
-  const waves = Array.from({ length: 4 }, () => ({
-    amp: (0.12 + rnd() * 0.3) * h,
-    freq: (1 + rnd() * peaks) * Math.PI * 2,
-    phase: rnd() * Math.PI * 2,
-  }));
-
   for (let x = 0; x <= w; x += 2) {
     const t = x / w;
-    let y = h * 0.52;
-    for (const wv of waves) y -= Math.sin(t * wv.freq + wv.phase) * wv.amp * 0.5;
-    y += (rnd() - 0.5) * jag;
-    g.lineTo(x, y);
+    // Rolling foothills form the floor of the range…
+    let up = noiseAt(coarse, t) * foothill;
+    // …and the volcano cones rise out of them. max() lets a cone swallow the
+    // hills at its base instead of stacking on top of them.
+    for (const p of cones) {
+      const d = Math.abs(t - p.u) / p.w;
+      if (d < 1) up = Math.max(up, Math.min(Math.pow(1 - d, 1.55), 0.96) * p.h);
+    }
+    up += (noiseAt(fine, t) - 0.5) * rough;
+    g.lineTo(x, h * (base - up));
   }
 
   g.lineTo(w, h);
@@ -126,6 +156,7 @@ export class Environment extends THREE.Group {
     this._buildSky();
     this._buildGround();
     this._buildWall();
+    this._buildFence();
     this._buildRidges();
     this._buildTrees();
     this._buildForeground();
@@ -328,21 +359,183 @@ export class Environment extends THREE.Group {
   }
 
   /**
+   * Inner pagar — a low ornamental fence ringing the pendopo itself, inside the
+   * compound wall. Cream masonry piers carry two dark timber rails over a stone
+   * plinth, with a wider gold-topped gate on the +Z axis lining up with both the
+   * compound gateway and the camera's approach path. The ring sits at ±24: clear
+   * of the 32-wide deck and its stairs, but close enough that in the hero shot
+   * it visibly belongs to the pendopo rather than to the plaza edge.
+   *
+   * The camera crosses z=24 at roughly y=4.2 on its way in, well above the
+   * 1.9-high gate piers, so nothing here can clip into the lens.
+   */
+  _buildFence() {
+    const g = new THREE.Group();
+    const F = 24; // half-extent of the square ring
+    const GATE = 10; // opening width on the +Z side
+    const STEP = 4; // pier spacing
+
+    const pierMat = this._track(
+      applyMaps(
+        new THREE.MeshStandardMaterial({
+          color: new THREE.Color(palette.cream).multiplyScalar(0.94),
+          roughness: 1,
+          metalness: 0,
+        }),
+        stoneMaps(),
+        [1, 1],
+        1.1,
+      ),
+    );
+    const capMat = this._track(
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(sceneColors.stoneShadow),
+        roughness: 0.85,
+        metalness: 0,
+      }),
+    );
+    const railMat = this._track(
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(sceneColors.timberDark),
+        roughness: 0.8,
+        metalness: 0,
+      }),
+    );
+    const goldMat = this._track(
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(sceneColors.goldWarm),
+        roughness: 0.45,
+        metalness: 0.6,
+      }),
+    );
+
+    // ── piers ──────────────────────────────────────────────────────────────
+    // Laid out first, then drawn as two InstancedMeshes (bodies + caps) so the
+    // whole ring of ~48 posts costs two draw calls.
+    const spots = [];
+    const n = Math.round((F * 2) / STEP);
+    for (let side = 0; side < 4; side++) {
+      for (let i = 0; i <= n; i++) {
+        const u = -F + i * STEP;
+        const [x, z] =
+          side === 0 ? [u, F] : side === 1 ? [u, -F] : side === 2 ? [F, u] : [-F, u];
+        // The front row leaves the gate span open; the side rows skip their end
+        // posts because the front/back rows already placed the corners.
+        if (side === 0 && Math.abs(x) < GATE / 2 + 0.01) continue;
+        if (side >= 2 && Math.abs(u) === F) continue;
+        spots.push([x, z]);
+      }
+    }
+
+    const pierGeo = this._track(new THREE.BoxGeometry(0.42, 1.25, 0.42));
+    const pierCapGeo = this._track(new THREE.ConeGeometry(0.36, 0.3, 4));
+    const bodies = new THREE.InstancedMesh(pierGeo, pierMat, spots.length);
+    const caps = new THREE.InstancedMesh(pierCapGeo, capMat, spots.length);
+    const dummy = new THREE.Object3D();
+    for (let i = 0; i < spots.length; i++) {
+      dummy.position.set(spots[i][0], 1.25 / 2, spots[i][1]);
+      dummy.rotation.y = 0;
+      dummy.updateMatrix();
+      bodies.setMatrixAt(i, dummy.matrix);
+      dummy.position.y = 1.25 + 0.15;
+      dummy.rotation.y = Math.PI / 4;
+      dummy.updateMatrix();
+      caps.setMatrixAt(i, dummy.matrix);
+    }
+    for (const inst of [bodies, caps]) {
+      inst.instanceMatrix.needsUpdate = true;
+      inst.castShadow = true;
+      inst.receiveShadow = true;
+      g.add(inst);
+    }
+
+    // ── rails and plinth ───────────────────────────────────────────────────
+    /** One straight run: a low stone plinth with two timber rails above it. */
+    const run = (len, x, z, ry) => {
+      const plinth = new THREE.Mesh(
+        this._track(new THREE.BoxGeometry(len, 0.22, 0.36)),
+        pierMat,
+      );
+      plinth.position.set(x, 0.11, z);
+      plinth.rotation.y = ry;
+      plinth.castShadow = true;
+      plinth.receiveShadow = true;
+      g.add(plinth);
+
+      for (const ry2 of [0.55, 0.98]) {
+        const rail = new THREE.Mesh(
+          this._track(new THREE.BoxGeometry(len, 0.09, 0.14)),
+          railMat,
+        );
+        rail.position.set(x, ry2, z);
+        rail.rotation.y = ry;
+        rail.castShadow = true;
+        g.add(rail);
+      }
+    };
+
+    // Back and sides run the full length; the front splits around the gate.
+    run(F * 2 + 0.4, 0, -F, 0);
+    run(F * 2 + 0.4, -F, 0, Math.PI / 2);
+    run(F * 2 + 0.4, F, 0, Math.PI / 2);
+    const half = F - GATE / 2;
+    for (const side of [-1, 1]) run(half, side * (GATE / 2 + half / 2), F, 0);
+
+    // ── gate ───────────────────────────────────────────────────────────────
+    // Two heavier piers with gold finials mark the entry, echoing the compound
+    // gateway behind them at a smaller scale.
+    const gatePierGeo = this._track(new THREE.BoxGeometry(0.7, 1.9, 0.7));
+    const finialGeo = this._track(new THREE.ConeGeometry(0.5, 0.62, 4));
+    for (const side of [-1, 1]) {
+      const pier = new THREE.Mesh(gatePierGeo, pierMat);
+      pier.position.set((side * GATE) / 2, 1.9 / 2, F);
+      pier.castShadow = true;
+      pier.receiveShadow = true;
+      g.add(pier);
+
+      const finial = new THREE.Mesh(finialGeo, goldMat);
+      finial.rotation.y = Math.PI / 4;
+      finial.position.set((side * GATE) / 2, 1.9 + 0.31, F);
+      finial.castShadow = true;
+      g.add(finial);
+    }
+
+    this.add(g);
+    this.fence = g;
+  }
+
+  /**
    * Three ridgelines. Each is further, larger, paler and less contrasty than the
    * last — the whole depth cue in three meshes.
+   *
+   * Cone placement is art-directed, not random. The camera never yaws off the +Z
+   * axis, so the skyline is a fixed composition: the big volcano sits well left
+   * of centre and its companion right of centre, keeping both clear of the title
+   * block and the pendopo's roofline in the hero shot. The near layer is
+   * deliberately cone-free — from the kraton the volcanoes are far away, so they
+   * belong on the palest, most distant layer, with only forested hills nearby.
    */
   _buildRidges() {
     this.ridges = [];
     const fogCol = new THREE.Color(sceneColors.skyLow);
 
     const specs = [
-      { z: -170, w: 900, h: 190, y: 18, seed: 11, peaks: 3.2, jag: 9, tint: sceneColors.forestDeep, mix: 0.42 },
-      { z: -260, w: 1300, h: 250, y: 34, seed: 27, peaks: 2.3, jag: 6, tint: palette.forest, mix: 0.66 },
-      { z: -360, w: 1800, h: 320, y: 52, seed: 43, peaks: 1.6, jag: 4, tint: palette.sage, mix: 0.84 },
+      // Near forested foothills — low, rolling, no cones.
+      { z: -170, w: 900, h: 150, y: 14, seed: 11, base: 0.58, foothill: 0.15, rough: 0.022,
+        cones: [{ u: 0.72, h: 0.24, w: 0.2 }],
+        tint: sceneColors.forestDeep, mix: 0.4 },
+      // Mid ridge — two gentle humps.
+      { z: -260, w: 1300, h: 200, y: 26, seed: 27, base: 0.6, foothill: 0.13, rough: 0.016,
+        cones: [{ u: 0.2, h: 0.36, w: 0.15 }, { u: 0.84, h: 0.28, w: 0.12 }],
+        tint: palette.forest, mix: 0.62 },
+      // Far volcano pair — Merapi left of centre, a lower companion to the right.
+      { z: -360, w: 1800, h: 230, y: 40, seed: 43, base: 0.62, foothill: 0.09, rough: 0.01,
+        cones: [{ u: 0.33, h: 0.5, w: 0.085 }, { u: 0.62, h: 0.34, w: 0.07 }],
+        tint: palette.sage, mix: 0.78 },
     ];
 
     for (const s of specs) {
-      const tex = this._track(ridgeTexture(s.seed, s.peaks, s.jag));
+      const tex = this._track(ridgeTexture(s.seed, s.cones, s.base, s.foothill, s.rough));
       // Lerping the silhouette toward fog colour is what makes it read as distant.
       const col = new THREE.Color(s.tint).lerp(fogCol, s.mix);
       const mat = this._track(
