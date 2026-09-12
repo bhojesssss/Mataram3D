@@ -21,10 +21,42 @@
   /* Turunan, bukan warna baru: gelap untuk kontras, terang untuk kartu. */
   --color-forest-deep: #1b2f21;
   --color-forest-mid: #3a5c44;
-  /* --gold di atas --paper cuma ~2:1; versi gelap ini lolos 4.5:1. */
-  --color-gold-deep: #7a5f2b;
+  /*
+    --gold di atas --paper cuma ~1.9:1 dan tidak pernah boleh jadi warna teks;
+    ia untuk garis, simpul, dan ornamen. Dua turunan di bawah dihitung terhadap
+    kasus terburuk homepage: teks di dalam .surface (paper 82%) yang kebetulan
+    jatuh di atas sirap atap yang gelap.
+
+      --color-gold-deep  5.00:1   (dulu #7a5f2b — cuma 4.07:1 di kondisi itu)
+      --color-ink-soft   5.24:1   (dulu #5c6a58 — cuma 3.82:1, gagal)
+
+    Keduanya sengaja masih di bawah --color-ink supaya hirarki teks primer vs
+    sekunder tetap kebaca; yang berubah cuma lantainya.
+  */
+  --color-gold-deep: #6b5220;
   --color-ink: #23301f;
-  --color-ink-soft: #5c6a58;
+  --color-ink-soft: #485742;
+
+  /*
+    Surface — bahan tempat teks boleh duduk di atas render 3D.
+
+    Satu-satunya aturan keterbacaan homepage: teks tidak pernah duduk langsung
+    di atas canvas, selalu di atas salah satu surface ini. Scrim global tidak
+    bisa menggantikannya karena render-nya tidak seragam — langit terang dan
+    massa pendopo gelap ada di layar yang sama, dan satu angka opacity global
+    tidak akan pernah benar untuk keduanya.
+  */
+  --surface-tint: 247 244 236; /* --color-paper, sebagai channel RGB */
+  /*
+    Satu kepekatan untuk kedua varian, sengaja. Kalau wash punya alpha sendiri
+    yang lebih rendah, ia jadi jalur diam-diam yang lolos audit kontras — dan
+    itu persis yang terjadi di percobaan pertama (wash 0.70: gold-deep cuma
+    3.76:1, gagal). Yang membedakan wash dari glass adalah bentuk tepinya, bukan
+    seberapa tembus pandang ia di tempat teks berada.
+  */
+  --surface-alpha: 0.82;
+  --surface-blur: 14px;
+  --surface-line: 201 163 78; /* --color-gold */
 
   --font-display: 'Cormorant Garamond', 'Times New Roman', serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
@@ -124,21 +156,128 @@
 /* ── utility yang tidak bisa diungkapkan class bawaan ──────────────────── */
 
 /*
-  Halo krem di belakang teks yang duduk langsung di atas render 3D. Scrim
-  penuh akan memucatkan pendopo; halo per-elemen bikin teks terbaca tanpa
-  menurunkan kontras render.
+  ── SISTEM SURFACE ────────────────────────────────────────────────────────
+
+  Dua bahan, satu token. Keduanya memakai --surface-tint yang sama, jadi
+  perbedaannya cuma bentuk — bukan dua sistem warna yang harus dijaga sinkron.
+
+    .surface       kartu kaca: punya tepi, punya blur. Untuk blok prosa yang
+                   tidak punya kartu sendiri (hero, intro, timeline, news).
+    .surface-wash  wash tanpa tepi: memudar radial, TIDAK pakai blur. Untuk
+                   kepala section yang isinya sudah punya kartu sendiri, di
+                   mana panel kedua cuma akan jadi bingkai di dalam bingkai.
+
+  Kenapa wash tidak pakai blur: backdrop-filter memaksa compositor membaca
+  ulang region canvas tiap frame, dan canvas di bawahnya sedang menggambar
+  scene 3D. Satu-dua instance tidak terasa; sembilan terasa. Jadi blur hanya
+  dibayar di tempat yang memang butuh tepi, dan wash cukup cat biasa.
+*/
+@utility surface {
+  position: relative;
+  border-radius: 14px;
+  background: rgb(var(--surface-tint) / var(--surface-alpha));
+  /*
+    Prefiks HARUS ditulis duluan. LightningCSS menganggap keduanya properti yang
+    sama dan hanya menyimpan deklarasi terakhir — dengan urutan terbalik, yang
+    lolos ke bundle cuma versi -webkit- dan Chrome serta Firefox kehilangan
+    blur-nya sama sekali. Tailwind sendiri mengeluarkan urutan ini.
+  */
+  -webkit-backdrop-filter: blur(var(--surface-blur)) saturate(112%);
+  backdrop-filter: blur(var(--surface-blur)) saturate(112%);
+  /* Hairline emas, bukan border penuh — moodboard-nya tenang, bukan berornamen. */
+  box-shadow:
+    inset 0 0 0 1px rgb(var(--surface-line) / 0.16),
+    0 18px 48px -28px rgb(27 47 33 / 0.4);
+}
+
+@utility surface-wash {
+  position: relative;
+  isolation: isolate;
+
+  /*
+    GEOMETRI — jangan diubah tanpa menghitung ulang.
+
+    Percobaan pertama pakai `ellipse 70% 65%` dengan stop penuh hanya di titik
+    pusat, dan hasilnya gagal audit: pada radial-gradient, persentase radius
+    dihitung terhadap LEBAR dan TINGGI kotak (bukan setengahnya), jadi tepi
+    kanan-kiri teks jatuh di ~64% sepanjang sinar gradien — tempat alpha sudah
+    tinggal setengahnya. Di sudut lebih parah lagi (jarak ternormalisasi 0.92,
+    alpha praktis nol). Teks di tepi blok praktis tidak punya wash sama sekali.
+
+    Susunan sekarang menaruh SELURUH kotak isi di dalam dataran alpha penuh:
+      ::before = 1.32× lebar isi, 1.52× tingginya (inset -26% -16%)
+      radius 94%/80%  → tepi isi jatuh di ~40% sepanjang sinar
+      sudut terjauh   → sqrt(0.40² + 0.41²) ≈ 0.58, masih di dalam stop 58%
+    Jadi setiap huruf duduk di atas alpha penuh dan pemudarannya seluruhnya
+    terjadi di luar teks — itu yang bikin wash bisa dijamin sama amannya
+    dengan glass meski tidak punya tepi.
+
+    Overhang-nya sengaja besar. Versi sebelumnya cuma -8%/-6%, dan dengan
+    dataran yang menutupi seluruh isi, pita pemudarnya jadi terlalu sempit
+    untuk dilihat sebagai pudaran — hero-nya terbaca sebagai kartu pucat yang
+    ditempel di atas pendopo, persis yang harus dihindari. Sekarang pita itu
+    selebar ~0.5× lebar bloknya sendiri, jadi ia terbaca sebagai kabut, bukan
+    tepi. Moodboard-nya memang begitu: hero-nya berkabut pucat dengan keraton
+    samar di bawahnya.
+  */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -26% -16%;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 94% 80% at 50% 50%,
+      rgb(var(--surface-tint) / var(--surface-alpha)) 0%,
+      rgb(var(--surface-tint) / var(--surface-alpha)) 58%,
+      rgb(var(--surface-tint) / calc(var(--surface-alpha) * 0.5)) 78%,
+      rgb(var(--surface-tint) / 0) 100%
+    );
+  }
+}
+
+/*
+  Tanpa backdrop-filter (Firefox lama, sebagian in-app browser) surface jadi
+  cat datar 82% — teksnya tetap aman, cuma tidak ada blur-nya. Dinaikkan
+  sedikit karena tanpa blur, detail berkontras tinggi di render masih terbaca
+  menembus cat dan bikin teks terasa lebih ramai.
+*/
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --surface-alpha: 0.9;
+  }
+}
+
+/*
+  Tier render rendah = GPU terintegrasi, dan di situ fill rate adalah sumber
+  daya paling langka (lihat config/quality.js). Blur dimatikan total dan
+  kepekatannya dinaikkan sebagai gantinya. Atribut ini dipasang <Scene3D>
+  dari tier yang sudah dideteksi scene — bukan media query terpisah yang
+  bisa tidak sepakat dengannya.
+*/
+:root[data-quality='low'] {
+  --surface-blur: 0px;
+  --surface-alpha: 0.9;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --surface-blur: 0px;
+    --surface-alpha: 0.96;
+  }
+}
+
+/*
+  Halo krem — sisa dari sebelum ada sistem surface. Sekarang dipakai HANYA
+  untuk elemen lepas yang memang tidak boleh punya panel: penanda SCROLL di
+  hero. Jangan dipakai lagi untuk badan teks; text-shadow 24px tidak sanggup
+  mengisi celah antar huruf pada ukuran 0.92rem, dan di atas surface hasilnya
+  justru buram.
 */
 @utility halo {
   text-shadow:
     0 1px 10px rgb(247 244 236 / 0.92),
     0 0 24px rgb(247 244 236 / 0.8);
-}
-
-@utility halo-strong {
-  text-shadow:
-    0 1px 12px rgb(247 244 236 / 0.95),
-    0 0 28px rgb(247 244 236 / 0.85),
-    0 0 52px rgb(247 244 236 / 0.6);
 }
 
 /* Arsiran emas untuk frame foto yang filenya belum ada. */

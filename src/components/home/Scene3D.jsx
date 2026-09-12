@@ -31,6 +31,13 @@ export default function Scene3D({ onReady }) {
     try {
       scene = new Scene(canvasRef.current);
       scene.start();
+
+      // Surface di homepage pakai backdrop-filter, dan itu biaya fill rate di
+      // atas canvas yang sedang menggambar scene 3D — sumber daya yang persis
+      // paling langka di GPU terintegrasi. Tier yang sudah dideteksi scene
+      // diteruskan ke CSS supaya blur-nya ikut turun bersama resolusi, bukan
+      // ditebak ulang lewat media query yang bisa tidak sepakat dengannya.
+      root.dataset.quality = scene.tier.name;
     } catch (err) {
       // WebGL tidak tersedia. Halaman tetap dokumen utuh tanpanya, jadi canvas
       // dibuang dan situs jalan terus alih-alih mati.
@@ -74,6 +81,9 @@ export default function Scene3D({ onReady }) {
       scroll?.dispose();
       scene?.dispose();
       root.classList.remove('has-js');
+      // Halaman dalam tidak punya canvas; kalau tier tertinggal, surface di sana
+      // ikut kehilangan blur-nya tanpa alasan.
+      delete root.dataset.quality;
     };
   }, [onReady]);
 

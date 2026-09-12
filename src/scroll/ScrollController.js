@@ -23,27 +23,39 @@ gsap.registerPlugin(ScrollTrigger);
 /**
  * Scrim opacity per beat.
  *
- * A mid-range scrim is the worst of both worlds: it greys the render into mush
- * while still leaving body copy hard to read. So this commits in both directions.
- * The 3D gets two moments where it is the page — the hero and the Palace section —
- * and everywhere else it drops back to a faint ghost behind clean cream editorial,
- * which is what PDF §8 asks for ("homepage sebagai teaser", modern editorial
- * layout). The swing from 0.84 down to 0.10 at `interior` is the reveal, and it is
- * the reason the payoff shot lands at all.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Dulu kurva ini yang memikul seluruh keterbacaan, dan itu sebabnya nilainya
+ * harus sampai 0.84 — teks duduk langsung di atas canvas, jadi satu-satunya cara
+ * menaikkan kontrasnya adalah menutupi seluruh layar.
+ *
+ * Masalahnya, scrim itu seragam sementara render-nya tidak. Langit terang dan
+ * massa pendopo gelap ada di layar yang sama, jadi angka yang cukup untuk teks
+ * di atas atap selalu kelewat pekat untuk teks di atas langit. Yang terukur:
+ * pada 0.10 teks forest di atas sirap cuma 1.02:1 — hilang total — sementara di
+ * atas langit sudah 7.93:1 dan tidak butuh apa-apa.
+ *
+ * Sekarang kontras dibawa masing-masing blok lewat sistem `surface`
+ * (components/ui/Surface.jsx), yang dijamin ≥4.5:1 di kasus terburuk bahkan
+ * dengan scrim NOL. Jadi kurva ini tidak lagi bertugas menjaga keterbacaan, dan
+ * turun ke peran aslinya: mengatur kedalaman — sedikit menjauhkan render saat
+ * pembaca sedang membaca, membukanya penuh saat tidak.
+ *
+ * Nilainya karena itu jauh lebih rendah dari sebelumnya (puncak 0.28, bukan
+ * 0.84). Efek bersihnya: pendoponya justru lebih terlihat sepanjang halaman
+ * daripada sebelum perubahan ini.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 const SCRIM_PATH = [
   { beat: 'hero', v: 0.0 },
-  { beat: 'approach', v: 0.3 },
-  // Eased back from 0.84 once the dancer became the subject. At that value she
-  // was a ghost everywhere except the Palace beat, and a dance the reader only
-  // sees one frame of is not a dance. The copy keeps its legibility from the
-  // per-element halos (the `halo` utility in index.css) instead of a blanket wash.
-  { beat: 'threshold', v: 0.6 },
-  { beat: 'interior', v: 0.1 },
-  { beat: 'ascend', v: 0.6 },
-  { beat: 'compound', v: 0.72 },
-  { beat: 'horizon', v: 0.78 },
-  { beat: 'end', v: 0.82 },
+  { beat: 'approach', v: 0.12 },
+  { beat: 'threshold', v: 0.18 },
+  // Tetap yang terendah setelah hero. Ini beat Palace — payoff seluruh scroll,
+  // dan satu-satunya tempat penari terbaca sebagai penari.
+  { beat: 'interior', v: 0.06 },
+  { beat: 'ascend', v: 0.18 },
+  { beat: 'compound', v: 0.22 },
+  { beat: 'horizon', v: 0.26 },
+  { beat: 'end', v: 0.28 },
 ];
 
 function sampleKeys(keys, t) {

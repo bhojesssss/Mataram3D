@@ -1,6 +1,7 @@
 import { cx } from '@/lib/cx';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { Wrap } from '@/components/ui/Wrap';
+import { Surface } from '@/components/ui/Surface';
 import { SearchIcon } from '@/components/ui/Icons';
 import { ButtonGold, Kicker, LinkMore, Rule, SectionTitle } from '@/components/ui/Type';
 import {
@@ -22,6 +23,12 @@ import {
     data-section  — tokens.js mengukur letaknya untuk menentukan beat kamera
     data-reveal   — ScrollController menganimasikannya lewat GSAP ScrollTrigger
   `data-reveal-delay` menahan sekian detik supaya blok terbuka berurutan.
+
+  KETERBACAAN: tidak ada teks di halaman ini yang boleh duduk langsung di atas
+  canvas. Semuanya berada di dalam <Surface> — 'glass' untuk blok prosa yang
+  tidak punya kartu sendiri, 'wash' untuk kepala section yang isinya sudah
+  berupa kartu. Alasan dan angka kontrasnya ada di components/ui/Surface.jsx.
+  Kalau menambah section baru, ikuti pola yang sama; jangan kembali ke `halo`.
 */
 
 export default function Home() {
@@ -59,15 +66,24 @@ function Section({ id, center = false, className, children }) {
   );
 }
 
+/*
+  Kepala section pakai varian 'wash': isinya di bawah sudah berupa CardGrid yang
+  punya latar sendiri, jadi panel berkaca di sini akan jadi bingkai di dalam
+  bingkai. Wash memberi kontras yang sama tanpa menambah tepi kedua.
+*/
 function SectionHead({ kicker, title, center = false, children }) {
   return (
-    <header className={cx('mb-16 max-w-[60ch]', center && 'mx-auto')}>
+    <Surface
+      as="header"
+      variant="wash"
+      className={cx('mb-16 max-w-[60ch]', center && 'mx-auto')}
+    >
       <Kicker data-reveal="">{kicker}</Kicker>
       <SectionTitle data-reveal="" data-reveal-delay="0.06">
         {title}
       </SectionTitle>
       {children}
-    </header>
+    </Surface>
   );
 }
 
@@ -85,15 +101,30 @@ function Hero() {
       */
       className="relative grid min-h-[100svh] place-items-center px-5 pt-[110px] pb-[clamp(120px,22vh,250px)] text-center"
     >
+      {/*
+        Hero adalah satu-satunya pengecualian dari aturan "semua teks di dalam
+        surface", dan pengecualiannya per-baris, bukan per-blok.
+
+        Percobaan membungkus seluruh blok hero dengan wash sudah dicoba dan
+        dibuang: pada lebar 760px, dataran alpha penuhnya menutupi tepat bagian
+        layar tempat pendopo berdiri, dan pendoponya jadi hantu. Itu membunuh
+        satu-satunya momen di halaman ini di mana 3D-nya utuh tanpa kompetisi —
+        persis kerugian yang bikin scrim global ditolak sejak awal.
+
+        Yang benar: baca komposisinya. Padding bawah section ini sengaja
+        mengangkat teks ke langit terbuka DI ATAS atap, dan di langit itu
+        forest sudah 7.97:1 tanpa bantuan apa pun. Judul besar dan baris
+        italiknya karena itu dibiarkan telanjang.
+
+        Yang tidak selamat cuma sub-copy: ia paling bawah, paling kecil, dan di
+        viewport pendek ia turun sampai menyentuh garis atap. Itu satu elemen,
+        jadi wash-nya dipasang di elemen itu saja — awan kecil setinggi dua
+        baris, bukan panel selebar hero.
+      */}
       <div className="relative max-w-[760px]">
-        {/*
-          Teks hero duduk langsung di atas render 3D. Scrim yang menutupi seluruh
-          hero memang memperbaiki keterbacaan, tapi memucatkan pendopo jadi hantu.
-          Halo krem per-elemen melakukan hal yang sama tanpa tepi yang terlihat.
-        */}
         <p
           data-reveal=""
-          className="halo-strong m-0 font-display text-[clamp(1.15rem,2.4vw,1.75rem)] font-light italic text-forest opacity-90"
+          className="halo m-0 font-display text-[clamp(1.15rem,2.4vw,1.75rem)] font-light italic text-forest opacity-90"
         >
           The Royal Heritage of
         </p>
@@ -101,7 +132,7 @@ function Hero() {
         <h1
           data-reveal=""
           data-reveal-delay="0.08"
-          className="mt-1 mb-0 font-display text-[clamp(3.4rem,12vw,8.2rem)] font-normal leading-[0.95] tracking-[0.06em] indent-[0.06em] text-forest"
+          className="halo mt-1 mb-0 font-display text-[clamp(3.4rem,12vw,8.2rem)] font-normal leading-[0.95] tracking-[0.06em] indent-[0.06em] text-forest"
         >
           MATARAM
         </h1>
@@ -110,15 +141,17 @@ function Hero() {
           <Rule />
         </div>
 
-        <p
+        <Surface
+          as="p"
+          variant="wash"
           data-reveal=""
           data-reveal-delay="0.22"
-          className="halo-strong mx-auto mb-16 max-w-[40ch] text-[clamp(0.95rem,1.5vw,1.08rem)] leading-[1.9] text-ink"
+          className="mx-auto mb-16 max-w-[40ch] text-[clamp(0.95rem,1.5vw,1.08rem)] leading-[1.9] text-ink"
         >
           Sebuah warisan luhur yang hidup
           <br />
           dalam sejarah, budaya, dan nilai-nilai Jawa.
-        </p>
+        </Surface>
 
         <ButtonGold href="#intro" data-reveal="" data-reveal-delay="0.3">
           EXPLORE
@@ -133,7 +166,13 @@ function Hero() {
           {/* Satu tanda berjalan — satu-satunya gerak berulang di halaman ini. */}
           <span className="animate-scroll-tick absolute inset-0 bg-forest" />
         </span>
-        <span className="text-[0.6rem] tracking-[0.3em] indent-[0.3em] text-ink-soft">SCROLL</span>
+        {/*
+          Satu-satunya teks di homepage yang memang tidak boleh punya panel —
+          panel di bawah hero akan membaca sebagai tombol. Ini kasus yang
+          tersisa untuk `halo`, dan ia cukup di sini karena empat huruf
+          berjarak lebar tidak punya celah dalam yang perlu diisi.
+        */}
+        <span className="halo text-[0.6rem] tracking-[0.3em] indent-[0.3em] text-ink">SCROLL</span>
       </div>
     </section>
   );
@@ -145,46 +184,49 @@ function Introduction() {
   return (
     <Section id="intro" center>
       <Wrap narrow>
-        <Kicker data-reveal="">Introduction</Kicker>
-        <SectionTitle data-reveal="" data-reveal-delay="0.06">
-          I Am Mataram
-        </SectionTitle>
-        <p
-          data-reveal=""
-          data-reveal-delay="0.12"
-          className="halo mx-auto max-w-[58ch] text-[clamp(1.02rem,1.5vw,1.16rem)] leading-[1.85] text-ink-soft"
-        >
-          Bukan sekadar kerajaan yang tercatat dalam buku sejarah, melainkan sebuah cara
-          memandang dunia — tempat manusia, penguasa, dan alam semesta berdiri dalam satu
-          keselarasan.
-        </p>
+        {/* Prosa murni tanpa kartu — ini yang varian 'glass' dibuat untuk. */}
+        <Surface>
+          <Kicker data-reveal="">Introduction</Kicker>
+          <SectionTitle data-reveal="" data-reveal-delay="0.06">
+            I Am Mataram
+          </SectionTitle>
+          <p
+            data-reveal=""
+            data-reveal-delay="0.12"
+            className="mx-auto max-w-[58ch] text-[clamp(1.02rem,1.5vw,1.16rem)] leading-[1.85] text-ink-soft"
+          >
+            Bukan sekadar kerajaan yang tercatat dalam buku sejarah, melainkan sebuah cara
+            memandang dunia — tempat manusia, penguasa, dan alam semesta berdiri dalam satu
+            keselarasan.
+          </p>
 
-        <figure data-reveal="" data-reveal-delay="0.18" className="mx-auto my-16 max-w-[32ch]">
-          <blockquote className="halo mb-4 font-display text-[clamp(1.6rem,3.6vw,2.5rem)] font-light italic leading-[1.3] text-forest">
-            Manunggaling Kawula Gusti
-          </blockquote>
-          <figcaption className="halo text-[0.94rem] leading-[1.75] text-ink-soft">
-            Keselarasan antara manusia, raja, dan alam semesta.
-          </figcaption>
-        </figure>
+          <figure data-reveal="" data-reveal-delay="0.18" className="mx-auto my-16 max-w-[32ch]">
+            <blockquote className="mb-4 font-display text-[clamp(1.6rem,3.6vw,2.5rem)] font-light italic leading-[1.3] text-forest">
+              Manunggaling Kawula Gusti
+            </blockquote>
+            <figcaption className="text-[0.94rem] leading-[1.75] text-ink-soft">
+              Keselarasan antara manusia, raja, dan alam semesta.
+            </figcaption>
+          </figure>
 
-        <ul
-          data-reveal=""
-          data-reveal-delay="0.24"
-          className="mt-16 flex list-none flex-wrap justify-center gap-[clamp(20px,5vw,64px)] border-t border-gold/30 pt-8"
-        >
-          {values.map((value) => (
-            <li
-              key={value}
-              className="halo inline-flex items-center gap-2.5 text-[0.74rem] font-medium tracking-[0.2em] text-forest"
-            >
-              <span aria-hidden="true" className="text-gold">
-                &#10022;
-              </span>
-              {value}
-            </li>
-          ))}
-        </ul>
+          <ul
+            data-reveal=""
+            data-reveal-delay="0.24"
+            className="mt-16 flex list-none flex-wrap justify-center gap-[clamp(20px,5vw,64px)] border-t border-gold/30 pt-8"
+          >
+            {values.map((value) => (
+              <li
+                key={value}
+                className="inline-flex items-center gap-2.5 text-[0.74rem] font-medium tracking-[0.2em] text-forest"
+              >
+                <span aria-hidden="true" className="text-gold">
+                  &#10022;
+                </span>
+                {value}
+              </li>
+            ))}
+          </ul>
+        </Surface>
       </Wrap>
     </Section>
   );
@@ -202,7 +244,20 @@ function HistoryPreview() {
           </LinkMore>
         </SectionHead>
 
-        <ol className="grid list-none grid-cols-[repeat(auto-fit,minmax(230px,1fr))] border-t border-forest/16">
+        {/*
+          Timeline itu teks telanjang di atas rel — tidak ada kartu per item yang
+          bisa membawa kontrasnya sendiri, jadi panelnya dipasang di tingkat
+          daftar. Satu surface untuk seluruh rel, bukan satu per kolom: empat
+          panel berjajar akan membaca sebagai empat kartu dan menghapus garis
+          rel yang justru jadi inti section ini.
+        */}
+        {/*
+          minmax turun dari 230px ke 200px. Padding surface memakan ~104px dari
+          lebar kolom, dan pada 230px empat entri tidak lagi muat di 1180px —
+          timeline-nya pecah jadi 3+1, yang membaca sebagai kesalahan layout
+          alih-alih satu rel utuh.
+        */}
+        <Surface as="ol" className="grid list-none grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-x-7">
           {timeline.map((item, i) => (
             <li
               key={item.year}
@@ -211,18 +266,16 @@ function HistoryPreview() {
               // before:* menggambar simpul emas di atas rel. Di bawah 900px kolomnya
               // menumpuk, jadi garis pemisah pindah dari kanan ke bawah.
               className={cx(
-                'relative border-forest/10 py-8 pr-8',
-                'border-b max-[900px]:last:border-b-0',
-                'min-[901px]:border-b-0 min-[901px]:border-r min-[901px]:last:border-r-0',
+                'relative border-t border-forest/16 pt-8 pb-2',
                 "before:absolute before:-top-[4.5px] before:left-0 before:h-2 before:w-2 before:rounded-full before:bg-gold before:content-['']",
               )}
             >
-              <span className="halo mb-2 block font-display text-[1.9rem] text-gold">{item.year}</span>
-              <h3 className="halo mb-2.5 font-display text-[1.32rem] font-medium text-forest">{item.title}</h3>
-              <p className="halo pr-4 text-[0.92rem] leading-[1.8] text-ink-soft">{item.body}</p>
+              <span className="mb-2 block font-display text-[1.9rem] text-gold-deep">{item.year}</span>
+              <h3 className="mb-2.5 font-display text-[1.32rem] font-medium text-forest">{item.title}</h3>
+              <p className="pr-4 text-[0.92rem] leading-[1.8] text-ink-soft">{item.body}</p>
             </li>
           ))}
-        </ol>
+        </Surface>
       </Wrap>
     </Section>
   );
@@ -244,13 +297,14 @@ function RoyalHousePreview() {
         </SectionHead>
 
         {/* Cuplikan silsilah — meniru "STRUKTUR KELUARGA KERAJAAN" di moodboard. */}
-        <div
+        <Surface
           data-reveal=""
-          className="mb-16 flex flex-col items-center rounded-lg border border-gold/28 bg-paper/72 px-8 py-16"
+          pad={false}
+          className="mb-16 flex flex-col items-center px-8 py-16"
         >
           <div className={GENEALOGY_BOX}>
             <p className={GENEALOGY_NAME}>SULTAN AGUNG</p>
-            <p className="mt-1.5 text-[0.72rem] text-gold">1613 &ndash; 1645</p>
+            <p className="mt-1.5 text-[0.72rem] text-gold-deep">1613 &ndash; 1645</p>
           </div>
 
           <div aria-hidden="true" className="h-10 w-px bg-forest/28" />
@@ -268,7 +322,7 @@ function RoyalHousePreview() {
               </div>
             ))}
           </div>
-        </div>
+        </Surface>
 
         <CardGrid>
           {royalHouseCards.map((card, i) => (
@@ -398,9 +452,17 @@ function Card({ title, body, delay = 0, tall = false }) {
 
 /* ── archive ─────────────────────────────────────────────────────────────── */
 
+/*
+  Tint sepenuh-section (dulu bg-paper/58) dibuang. Itu peninggalan dari saat
+  scrim global masih 0.72 di beat ini — di atas render yang waktu itu sudah
+  hampir krem, ia terbaca sebagai pita halus. Dengan scrim sekarang 0.22, cat
+  58% di atas massa pendopo gelap justru jadi kabut kelabu, persis hasil yang
+  dihindari SCRIM_PATH. Kontrasnya sudah dibawa wash di kepala section dan latar
+  kartunya masing-masing.
+*/
 function ArchivePreview() {
   return (
-    <Section id="archive" className="bg-paper/58">
+    <Section id="archive">
       <Wrap>
         <SectionHead kicker="Royal Archive" title="Arsip Kerajaan" />
 
@@ -468,24 +530,24 @@ function News() {
       <Wrap>
         <SectionHead kicker="News & Events" title="Kabar dari Keraton" />
 
-        <ul className="list-none border-t border-forest/16">
+        <Surface as="ul" className="list-none">
           {news.map((item, i) => (
             <li
               key={item.title}
               data-reveal=""
               data-reveal-delay={(i * 0.05).toFixed(2)}
-              className="grid grid-cols-1 items-baseline gap-2 border-b border-forest/12 py-8 transition-[padding-left] duration-500 ease-heritage hover:pl-3.5 min-[761px]:grid-cols-[110px_1fr_auto] min-[761px]:gap-8"
+              className="grid grid-cols-1 items-baseline gap-2 border-b border-forest/12 py-8 transition-[padding-left] duration-500 ease-heritage first:pt-0 last:border-b-0 last:pb-0 hover:pl-3.5 min-[761px]:grid-cols-[110px_1fr_auto] min-[761px]:gap-8"
             >
-              <span className="halo text-[0.66rem] font-medium tracking-[0.18em] uppercase text-gold">
+              <span className="text-[0.66rem] font-medium tracking-[0.18em] uppercase text-gold-deep">
                 {item.tag}
               </span>
-              <h3 className="halo font-display text-[clamp(1.18rem,2.2vw,1.55rem)] font-normal text-forest">
+              <h3 className="font-display text-[clamp(1.18rem,2.2vw,1.55rem)] font-normal text-forest">
                 {item.title}
               </h3>
-              <span className="halo text-[0.8rem] whitespace-nowrap text-ink-soft">{item.date}</span>
+              <span className="text-[0.8rem] whitespace-nowrap text-ink-soft">{item.date}</span>
             </li>
           ))}
-        </ul>
+        </Surface>
       </Wrap>
     </Section>
   );
