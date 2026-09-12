@@ -6,6 +6,7 @@ import RoyalHouse from '@/pages/RoyalHouse';
 import Palace from '@/pages/Palace';
 import Archive from '@/pages/Archive';
 import About from '@/pages/About';
+import AdminEntry from '@/admin/AdminEntry';
 
 /**
  * Peta route.
@@ -16,6 +17,7 @@ import About from '@/pages/About';
 export default function App() {
   return (
     <Routes>
+      <Route path="/admin/*" element={<AdminEntry />} />
       <Route element={<SiteLayout />}>
         <Route index element={<Home />} />
         <Route path="/history" element={<History />} />

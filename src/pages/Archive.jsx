@@ -1,17 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
 import { cx } from '@/lib/cx';
 import { usePageMeta } from '@/hooks/usePageMeta';
-import { categories, records } from '@/data/archive';
+import { useArchiveRecords } from '@/hooks/useArchiveRecords';
+import { categories } from '@/data/archive';
 import { Wrap } from '@/components/ui/Wrap';
 import { Chip } from '@/components/ui/Chip';
 import { Frame } from '@/components/ui/Frame';
 import { ButtonOutline, Eyebrow } from '@/components/ui/Type';
 import { HEAD_PADDING, PageTitle } from '@/components/ui/Page';
-
-/** Teks yang dicari untuk tiap record, dihitung sekali. */
-const HAYSTACKS = new Map(
-  records.map((record) => [record, `${record.cat} ${record.era} ${record.title} ${record.sub}`.toLowerCase()]),
-);
 
 export default function Archive() {
   usePageMeta(
@@ -22,15 +18,21 @@ export default function Archive() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const inputRef = useRef(null);
+  const { status, records } = useArchiveRecords();
+
+  const haystacks = useMemo(
+    () => new Map(records.map((record) => [record, `${record.cat} ${record.era} ${record.title} ${record.sub}`.toLowerCase()])),
+    [records],
+  );
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return records.filter((record) => {
       const okCat = category === 'All' || record.cat === category;
-      const okQuery = !q || HAYSTACKS.get(record).includes(q);
+      const okQuery = !q || haystacks.get(record).includes(q);
       return okCat && okQuery;
     });
-  }, [query, category]);
+  }, [records, haystacks, query, category]);
 
   const reset = () => {
     setQuery('');
@@ -108,19 +110,30 @@ export default function Archive() {
               ))}
             </ul>
             <p aria-live="polite" className="text-[0.66rem] tracking-[0.22em] uppercase text-ink/72">
-              {shown.length} {shown.length === 1 ? 'record' : 'records'}
+              {status === 'loading' ? 'Loading…' : `${shown.length} ${shown.length === 1 ? 'record' : 'records'}`}
             </p>
           </div>
 
-          {shown.length > 0 ? (
+          {status === 'loading' ? (
+            <p role="status" className="py-[clamp(50px,7vw,110px)] text-center text-[0.86rem] text-ink/72">
+              Opening the collection…
+            </p>
+          ) : shown.length > 0 ? (
             /*
               auto-fill, bukan auto-fit: menyaring sampai tersisa satu hasil harus
               meninggalkan kartu itu selebar kolom, bukan melebar sepenuh grid.
             */
             <div className="grid grid-cols-2 gap-[clamp(12px,1.6vw,22px)] min-[521px]:grid-cols-[repeat(auto-fill,minmax(210px,1fr))]">
               {shown.map((record) => (
-                <RecordCard key={record.title} record={record} />
+                <RecordCard key={record.id ?? record.title} record={record} />
               ))}
+            </div>
+          ) : records.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-forest/25 px-5 py-[clamp(50px,7vw,110px)] text-center">
+              <p className="mb-3 font-display text-[clamp(1.35rem,2.4vw,2.1rem)] italic text-forest">
+                The collection is being catalogued.
+              </p>
+              <p className="text-[0.86rem] text-ink/72">New records will appear here soon.</p>
             </div>
           ) : (
             <div className="rounded-lg border border-dashed border-forest/25 px-5 py-[clamp(50px,7vw,110px)] text-center">
@@ -138,7 +151,7 @@ export default function Archive() {
 }
 
 function RecordCard({ record }) {
-  return (
+  const card = (
     <article className="overflow-hidden rounded-lg border border-forest/18 bg-paper transition-[border-color,transform] duration-500 ease-heritage hover:-translate-y-[3px] hover:border-gold/70">
       <Frame
         src={record.image}
@@ -157,5 +170,19 @@ function RecordCard({ record }) {
         <p className="text-[0.72rem] leading-[1.6] text-ink/72">{record.sub}</p>
       </div>
     </article>
+  );
+
+  if (!record.href) return card;
+
+  return (
+    <a
+      href={record.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block rounded-lg no-underline outline-offset-4 focus-visible:outline-2 focus-visible:outline-gold"
+    >
+      {card}
+      <span className="sr-only"> (opens in a new tab)</span>
+    </a>
   );
 }
