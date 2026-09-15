@@ -24,11 +24,11 @@
   /*
     --gold di atas --paper cuma ~1.9:1 dan tidak pernah boleh jadi warna teks;
     ia untuk garis, simpul, dan ornamen. Dua turunan di bawah dihitung terhadap
-    kasus terburuk homepage: teks di dalam .surface (paper 82%) yang kebetulan
+    kasus terburuk homepage: teks di dalam band (paper 88%) yang kebetulan
     jatuh di atas sirap atap yang gelap.
 
-      --color-gold-deep  5.00:1   (dulu #7a5f2b — cuma 4.07:1 di kondisi itu)
-      --color-ink-soft   5.24:1   (dulu #5c6a58 — cuma 3.82:1, gagal)
+      --color-gold-deep  5.61:1   (dulu #7a5f2b — gagal di kondisi ini)
+      --color-ink-soft   5.89:1   (dulu #5c6a58 — 3.82:1, gagal)
 
     Keduanya sengaja masih di bawah --color-ink supaya hirarki teks primer vs
     sekunder tetap kebaca; yang berubah cuma lantainya.
@@ -38,25 +38,52 @@
   --color-ink-soft: #485742;
 
   /*
-    Surface — bahan tempat teks boleh duduk di atas render 3D.
+    ── BAND ────────────────────────────────────────────────────────────────
 
-    Satu-satunya aturan keterbacaan homepage: teks tidak pernah duduk langsung
-    di atas canvas, selalu di atas salah satu surface ini. Scrim global tidak
-    bisa menggantikannya karena render-nya tidak seragam — langit terang dan
-    massa pendopo gelap ada di layar yang sama, dan satu angka opacity global
-    tidak akan pernah benar untuk keduanya.
+    Struktur halaman ini cuma satu kalimat: 3D-nya adalah halaman di dua
+    momen — hero dan Palace — dan di antaranya sebuah pelat paper menutupinya
+    supaya orang bisa membaca.
+
+    Itu menggantikan dua percobaan sebelumnya. Scrim global gagal karena
+    render-nya tidak seragam: langit terang dan massa pendopo gelap ada di
+    layar yang sama, jadi satu angka opacity harus memilih salah satunya dan
+    selalu salah untuk yang lain. Surface per-blok memperbaiki kontrasnya
+    tapi memecah halaman jadi sebelas kartu ngambang.
+
+    Band menyelesaikan keduanya karena ia dipotong menurut NARASI, bukan
+    menurut tiap blok teks: satu pelat untuk seluruh rentang baca, berhenti
+    tepat di Palace, lalu lanjut lagi. Pemudaran di ujung band pertama itulah
+    reveal-nya Palace — putihnya mengelupas, interiornya muncul.
   */
   --surface-tint: 247 244 236; /* --color-paper, sebagai channel RGB */
+
   /*
-    Satu kepekatan untuk kedua varian, sengaja. Kalau wash punya alpha sendiri
-    yang lebih rendah, ia jadi jalur diam-diam yang lolos audit kontras — dan
-    itu persis yang terjadi di percobaan pertama (wash 0.70: gold-deep cuma
-    3.76:1, gagal). Yang membedakan wash dari glass adalah bentuk tepinya, bukan
-    seberapa tembus pandang ia di tempat teks berada.
+    88%: cukup pekat untuk menjamin teks (semua warna >= 5.6:1 bahkan di atas
+    bagian render tergelap), cukup tembus untuk pendoponya tetap terbaca
+    sebagai gambar di belakang teks, bukan sekadar tekstur.
+
+    Sengaja TANPA backdrop-filter. Band ini selebar viewport dan setinggi
+    beberapa layar; blur seluas itu di atas canvas yang sedang menggambar
+    scene 3D adalah biaya fill rate paling mahal yang bisa ditambahkan ke
+    halaman ini — dan pada 88% hasilnya nyaris tak terlihat. Yang justru
+    dibeli orang di angka 88% adalah MELIHAT pendoponya; mem-blur-nya
+    membatalkan alasan angka itu dipilih.
   */
-  --surface-alpha: 0.82;
-  --surface-blur: 14px;
-  --surface-line: 201 163 78; /* --color-gold */
+  --band-alpha: 0.88;
+
+  /*
+    Panjang pemudaran di ujung band. Ini variabel kerajinan utama di halaman
+    ini: kependekan terbaca sebagai potongan, kepanjangan bikin reveal Palace
+    lembek. Diikat ke vh supaya pemudarannya tetap sebanding dengan layar,
+    bukan dengan panjang section.
+
+    Angka ini juga jadi padding band (lihat @utility band), jadi menaikkannya
+    menambah ruang kosong sungguhan di tiga tempat: sesudah hero, sebelum
+    Palace, dan sesudah Palace. Ditahan di 16vh — bukan 20vh seperti percobaan
+    pertama — karena di atas itu jeda sebelum reveal mulai terasa seperti
+    halaman kehabisan isi, bukan seperti tarikan napas.
+  */
+  --band-fade: clamp(120px, 16vh, 220px);
 
   --font-display: 'Cormorant Garamond', 'Times New Roman', serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
@@ -156,40 +183,74 @@
 /* ── utility yang tidak bisa diungkapkan class bawaan ──────────────────── */
 
 /*
-  ── SISTEM SURFACE ────────────────────────────────────────────────────────
+  ── BAND ──────────────────────────────────────────────────────────────────
 
-  Dua bahan, satu token. Keduanya memakai --surface-tint yang sama, jadi
-  perbedaannya cuma bentuk — bukan dua sistem warna yang harus dijaga sinkron.
+  Pelat paper selebar viewport yang menutupi render 3D sepanjang rentang
+  baca. Dipasang sebagai lapisan absolut di belakang isinya, bukan sebagai
+  latar elemen isi, karena mask-nya hanya boleh mengenai pelat — kalau
+  dipasang langsung di wadah isi, teksnya ikut memudar di ujung band.
 
-    .surface       kartu kaca: punya tepi, punya blur. Untuk blok prosa yang
-                   tidak punya kartu sendiri (hero, intro, timeline, news).
-    .surface-wash  wash tanpa tepi: memudar radial, TIDAK pakai blur. Untuk
-                   kepala section yang isinya sudah punya kartu sendiri, di
-                   mana panel kedua cuma akan jadi bingkai di dalam bingkai.
-
-  Kenapa wash tidak pakai blur: backdrop-filter memaksa compositor membaca
-  ulang region canvas tiap frame, dan canvas di bawahnya sedang menggambar
-  scene 3D. Satu-dua instance tidak terasa; sembilan terasa. Jadi blur hanya
-  dibayar di tempat yang memang butuh tepi, dan wash cukup cat biasa.
+  `--band-head` / `--band-foot` mengatur ujung mana yang memudar. Band kedua
+  mengakhiri halaman dengan bertemu footer hijau yang solid, jadi ujung
+  bawahnya dipotong rata (0px) — pemudaran di situ cuma akan bikin pita
+  transisi kotor sebelum warna berganti total.
 */
-@utility surface {
+/*
+  Padding = panjang fade, dan itu BUKAN kosmetik — itu yang bikin sistem ini
+  benar.
+
+  Versi pertama tidak punya padding: pelatnya seukuran isinya, jadi zona
+  pemudaran jatuh tepat di atas section pertama dan terakhir tiap band. Kicker
+  "THE ROYAL HOUSE" mendarat di tengah pudaran dan kontrasnya anjlok di bawah
+  angka yang sudah diverifikasi — audit meloloskannya karena audit mengukur
+  alpha penuh, sementara teks itu tidak pernah mendapat alpha penuh.
+
+  Dengan padding sepanjang fade, kotak isi dimulai persis di titik mask
+  mencapai 100%. Jadi setiap huruf di dalam band dijamin duduk di atas alpha
+  penuh, dan seluruh pemudaran terjadi di ruang kosong. Padding yang lebih
+  kecil dari fade akan membocorkan teks ke dalam pudaran lagi.
+
+  Satu variabel menggerakkan keduanya, jadi mask dan padding tidak akan pernah
+  bisa tidak sepakat: band kedua menyetel --band-foot: 0px dan dengan sendirinya
+  kehilangan pemudaran bawah DAN padding bawahnya, lalu bertemu footer rata.
+*/
+@utility band {
   position: relative;
-  border-radius: 14px;
-  background: rgb(var(--surface-tint) / var(--surface-alpha));
-  /*
-    Prefiks HARUS ditulis duluan. LightningCSS menganggap keduanya properti yang
-    sama dan hanya menyimpan deklarasi terakhir — dengan urutan terbalik, yang
-    lolos ke bundle cuma versi -webkit- dan Chrome serta Firefox kehilangan
-    blur-nya sama sekali. Tailwind sendiri mengeluarkan urutan ini.
-  */
-  -webkit-backdrop-filter: blur(var(--surface-blur)) saturate(112%);
-  backdrop-filter: blur(var(--surface-blur)) saturate(112%);
-  /* Hairline emas, bukan border penuh — moodboard-nya tenang, bukan berornamen. */
-  box-shadow:
-    inset 0 0 0 1px rgb(var(--surface-line) / 0.16),
-    0 18px 48px -28px rgb(27 47 33 / 0.4);
+  isolation: isolate;
+  padding-top: var(--band-head, var(--band-fade));
+  padding-bottom: var(--band-foot, var(--band-fade));
 }
 
+@utility band-plate {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: rgb(var(--surface-tint) / var(--band-alpha));
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--band-head, var(--band-fade)),
+    #000 calc(100% - var(--band-foot, var(--band-fade))),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--band-head, var(--band-fade)),
+    #000 calc(100% - var(--band-foot, var(--band-fade))),
+    transparent 100%
+  );
+}
+
+/*
+  ── SURFACE WASH ──────────────────────────────────────────────────────────
+
+  Sisa dari sistem sebelumnya, dan sekarang tinggal satu pemakai: sub-copy
+  hero, satu-satunya teks di halaman ini yang duduk di luar band. Varian
+  `glass` yang dulu ada di sini sudah dihapus — band membuatnya mubazir, dan
+  bersamanya hilang pula seluruh backdrop-filter dari homepage.
+*/
 @utility surface-wash {
   position: relative;
   isolation: isolate;
@@ -210,7 +271,7 @@
       sudut terjauh   → sqrt(0.40² + 0.41²) ≈ 0.58, masih di dalam stop 58%
     Jadi setiap huruf duduk di atas alpha penuh dan pemudarannya seluruhnya
     terjadi di luar teks — itu yang bikin wash bisa dijamin sama amannya
-    dengan glass meski tidak punya tepi.
+    dengan band meski tidak punya tepi.
 
     Overhang-nya sengaja besar. Versi sebelumnya cuma -8%/-6%, dan dengan
     dataran yang menutupi seluruh isi, pita pemudarnya jadi terlalu sempit
@@ -228,42 +289,24 @@
     pointer-events: none;
     background: radial-gradient(
       ellipse 94% 80% at 50% 50%,
-      rgb(var(--surface-tint) / var(--surface-alpha)) 0%,
-      rgb(var(--surface-tint) / var(--surface-alpha)) 58%,
-      rgb(var(--surface-tint) / calc(var(--surface-alpha) * 0.5)) 78%,
+      rgb(var(--surface-tint) / var(--band-alpha)) 0%,
+      rgb(var(--surface-tint) / var(--band-alpha)) 58%,
+      rgb(var(--surface-tint) / calc(var(--band-alpha) * 0.5)) 78%,
       rgb(var(--surface-tint) / 0) 100%
     );
   }
 }
 
 /*
-  Tanpa backdrop-filter (Firefox lama, sebagian in-app browser) surface jadi
-  cat datar 82% — teksnya tetap aman, cuma tidak ada blur-nya. Dinaikkan
-  sedikit karena tanpa blur, detail berkontras tinggi di render masih terbaca
-  menembus cat dan bikin teks terasa lebih ramai.
+  Satu-satunya kepekatan di halaman ini, jadi band dan wash tidak akan pernah
+  bisa berbeda diam-diam. Di sini dinaikkan mendekati pekat: orang yang
+  meminta transparansi dikurangi tidak sedang meminta pendopo samar di balik
+  teks. Hook tier render yang dulu ada di sini sudah dihapus bersama
+  backdrop-filter-nya — tidak ada lagi yang perlu diturunkan per GPU.
 */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root {
-    --surface-alpha: 0.9;
-  }
-}
-
-/*
-  Tier render rendah = GPU terintegrasi, dan di situ fill rate adalah sumber
-  daya paling langka (lihat config/quality.js). Blur dimatikan total dan
-  kepekatannya dinaikkan sebagai gantinya. Atribut ini dipasang <Scene3D>
-  dari tier yang sudah dideteksi scene — bukan media query terpisah yang
-  bisa tidak sepakat dengannya.
-*/
-:root[data-quality='low'] {
-  --surface-blur: 0px;
-  --surface-alpha: 0.9;
-}
-
 @media (prefers-reduced-transparency: reduce) {
   :root {
-    --surface-blur: 0px;
-    --surface-alpha: 0.96;
+    --band-alpha: 0.97;
   }
 }
 

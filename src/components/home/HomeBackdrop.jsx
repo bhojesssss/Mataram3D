@@ -10,7 +10,7 @@ import { Loader } from './Loader';
 const Scene3D = lazy(() => import('./Scene3D'));
 
 /**
- * Latar homepage: scene 3D, scrim, dan loader di atas keduanya.
+ * Latar homepage: scene 3D, dengan loader di atasnya.
  *
  * Dipasang SiteLayout sebagai saudara <main>, bukan anaknya. Canvas-nya fixed
  * di z-0 dan konten halaman di z-2; kalau ia hidup di dalam <main> ia akan

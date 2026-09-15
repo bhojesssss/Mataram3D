@@ -1,6 +1,7 @@
 import { cx } from '@/lib/cx';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { Wrap } from '@/components/ui/Wrap';
+import { Band } from '@/components/ui/Band';
 import { Surface } from '@/components/ui/Surface';
 import { SearchIcon } from '@/components/ui/Icons';
 import { ButtonGold, Kicker, LinkMore, Rule, SectionTitle } from '@/components/ui/Type';
@@ -16,7 +17,7 @@ import {
 } from '@/data/home';
 
 /*
-  Homepage — satu pengalaman 3D yang digulir. Scene, scrim, dan loader dipasang
+  Homepage — satu pengalaman 3D yang digulir. Scene dan loader dipasang
   SiteLayout lewat <HomeBackdrop>; file ini murni isi editorialnya.
 
   Dua atribut di bawah dibaca kode di luar React dan harus tetap ada:
@@ -24,11 +25,11 @@ import {
     data-reveal   — ScrollController menganimasikannya lewat GSAP ScrollTrigger
   `data-reveal-delay` menahan sekian detik supaya blok terbuka berurutan.
 
-  KETERBACAAN: tidak ada teks di halaman ini yang boleh duduk langsung di atas
-  canvas. Semuanya berada di dalam <Surface> — 'glass' untuk blok prosa yang
-  tidak punya kartu sendiri, 'wash' untuk kepala section yang isinya sudah
-  berupa kartu. Alasan dan angka kontrasnya ada di components/ui/Surface.jsx.
-  Kalau menambah section baru, ikuti pola yang sama; jangan kembali ke `halo`.
+  KETERBACAAN: kontras dibawa <Band>, bukan tiap blok. Section baru cukup
+  ditaruh di dalam salah satu band dan sudah aman — tidak perlu panel, wash,
+  atau halo sendiri. Yang butuh perhatian justru sebaliknya: menaruh sesuatu
+  di LUAR band (seperti Palace) berarti mengambil alih tanggung jawab kontras
+  section itu. Alasan lengkapnya di components/ui/Band.jsx.
 */
 
 export default function Home() {
@@ -37,17 +38,35 @@ export default function Home() {
     'Sebuah warisan luhur yang hidup dalam sejarah, budaya, dan nilai-nilai Jawa. Digital heritage experience Istana Mataram.',
   );
 
+  /*
+    Susunannya adalah strukturnya. Dua rentang baca mengapit satu momen 3D:
+    hero membuka dengan pendopo tanpa penghalang, band pertama menutupinya
+    selama tiga section teks, lalu MENGELUPAS tepat di Palace — itu reveal-nya
+    — dan band kedua menutup kembali sampai footer.
+
+    Palace sengaja berdiri di luar band. Ia satu-satunya section yang membawa
+    panelnya sendiri (hijau, rata kanan), dan di beat itu kamera menahan
+    penari di sepertiga kiri; pelat paper di sana akan menutupi tepat
+    satu-satunya gambar yang jadi alasan section itu ada.
+  */
   return (
     <>
       <Hero />
-      <Introduction />
-      <HistoryPreview />
-      <RoyalHousePreview />
+
+      <Band>
+        <Introduction />
+        <HistoryPreview />
+        <RoyalHousePreview />
+      </Band>
+
       <PalaceBeat />
-      <Culture />
-      <Discover />
-      <ArchivePreview />
-      <News />
+
+      <Band fade="top">
+        <Culture />
+        <Discover />
+        <ArchivePreview />
+        <News />
+      </Band>
     </>
   );
 }
@@ -66,24 +85,15 @@ function Section({ id, center = false, className, children }) {
   );
 }
 
-/*
-  Kepala section pakai varian 'wash': isinya di bawah sudah berupa CardGrid yang
-  punya latar sendiri, jadi panel berkaca di sini akan jadi bingkai di dalam
-  bingkai. Wash memberi kontras yang sama tanpa menambah tepi kedua.
-*/
 function SectionHead({ kicker, title, center = false, children }) {
   return (
-    <Surface
-      as="header"
-      variant="wash"
-      className={cx('mb-16 max-w-[60ch]', center && 'mx-auto')}
-    >
+    <header className={cx('mb-16 max-w-[60ch]', center && 'mx-auto')}>
       <Kicker data-reveal="">{kicker}</Kicker>
       <SectionTitle data-reveal="" data-reveal-delay="0.06">
         {title}
       </SectionTitle>
       {children}
-    </Surface>
+    </header>
   );
 }
 
@@ -143,7 +153,6 @@ function Hero() {
 
         <Surface
           as="p"
-          variant="wash"
           data-reveal=""
           data-reveal-delay="0.22"
           className="mx-auto mb-16 max-w-[40ch] text-[clamp(0.95rem,1.5vw,1.08rem)] leading-[1.9] text-ink"
@@ -184,49 +193,46 @@ function Introduction() {
   return (
     <Section id="intro" center>
       <Wrap narrow>
-        {/* Prosa murni tanpa kartu — ini yang varian 'glass' dibuat untuk. */}
-        <Surface>
-          <Kicker data-reveal="">Introduction</Kicker>
-          <SectionTitle data-reveal="" data-reveal-delay="0.06">
-            I Am Mataram
-          </SectionTitle>
-          <p
-            data-reveal=""
-            data-reveal-delay="0.12"
-            className="mx-auto max-w-[58ch] text-[clamp(1.02rem,1.5vw,1.16rem)] leading-[1.85] text-ink-soft"
-          >
-            Bukan sekadar kerajaan yang tercatat dalam buku sejarah, melainkan sebuah cara
-            memandang dunia — tempat manusia, penguasa, dan alam semesta berdiri dalam satu
-            keselarasan.
-          </p>
+        <Kicker data-reveal="">Introduction</Kicker>
+        <SectionTitle data-reveal="" data-reveal-delay="0.06">
+          I Am Mataram
+        </SectionTitle>
+        <p
+          data-reveal=""
+          data-reveal-delay="0.12"
+          className="mx-auto max-w-[58ch] text-[clamp(1.02rem,1.5vw,1.16rem)] leading-[1.85] text-ink-soft"
+        >
+          Bukan sekadar kerajaan yang tercatat dalam buku sejarah, melainkan sebuah cara
+          memandang dunia — tempat manusia, penguasa, dan alam semesta berdiri dalam satu
+          keselarasan.
+        </p>
 
-          <figure data-reveal="" data-reveal-delay="0.18" className="mx-auto my-16 max-w-[32ch]">
-            <blockquote className="mb-4 font-display text-[clamp(1.6rem,3.6vw,2.5rem)] font-light italic leading-[1.3] text-forest">
-              Manunggaling Kawula Gusti
-            </blockquote>
-            <figcaption className="text-[0.94rem] leading-[1.75] text-ink-soft">
-              Keselarasan antara manusia, raja, dan alam semesta.
-            </figcaption>
-          </figure>
+        <figure data-reveal="" data-reveal-delay="0.18" className="mx-auto my-16 max-w-[32ch]">
+          <blockquote className="mb-4 font-display text-[clamp(1.6rem,3.6vw,2.5rem)] font-light italic leading-[1.3] text-forest">
+            Manunggaling Kawula Gusti
+          </blockquote>
+          <figcaption className="text-[0.94rem] leading-[1.75] text-ink-soft">
+            Keselarasan antara manusia, raja, dan alam semesta.
+          </figcaption>
+        </figure>
 
-          <ul
-            data-reveal=""
-            data-reveal-delay="0.24"
-            className="mt-16 flex list-none flex-wrap justify-center gap-[clamp(20px,5vw,64px)] border-t border-gold/30 pt-8"
-          >
-            {values.map((value) => (
-              <li
-                key={value}
-                className="inline-flex items-center gap-2.5 text-[0.74rem] font-medium tracking-[0.2em] text-forest"
-              >
-                <span aria-hidden="true" className="text-gold">
-                  &#10022;
-                </span>
-                {value}
-              </li>
-            ))}
-          </ul>
-        </Surface>
+        <ul
+          data-reveal=""
+          data-reveal-delay="0.24"
+          className="mt-16 flex list-none flex-wrap justify-center gap-[clamp(20px,5vw,64px)] border-t border-gold/30 pt-8"
+        >
+          {values.map((value) => (
+            <li
+              key={value}
+              className="inline-flex items-center gap-2.5 text-[0.74rem] font-medium tracking-[0.2em] text-forest"
+            >
+              <span aria-hidden="true" className="text-gold">
+                &#10022;
+              </span>
+              {value}
+            </li>
+          ))}
+        </ul>
       </Wrap>
     </Section>
   );
@@ -245,19 +251,13 @@ function HistoryPreview() {
         </SectionHead>
 
         {/*
-          Timeline itu teks telanjang di atas rel — tidak ada kartu per item yang
-          bisa membawa kontrasnya sendiri, jadi panelnya dipasang di tingkat
-          daftar. Satu surface untuk seluruh rel, bukan satu per kolom: empat
-          panel berjajar akan membaca sebagai empat kartu dan menghapus garis
-          rel yang justru jadi inti section ini.
+          Kembali ke minmax 230px seperti versi aslinya. Waktu timeline masih
+          dibungkus panelnya sendiri, padding panel itu memakan ~104px dan
+          empat entri tidak muat lagi di 1180px — relnya pecah jadi 3+1. Band
+          tidak menambah padding apa pun ke dalam kolom, jadi batasan itu
+          hilang bersama panelnya.
         */}
-        {/*
-          minmax turun dari 230px ke 200px. Padding surface memakan ~104px dari
-          lebar kolom, dan pada 230px empat entri tidak lagi muat di 1180px —
-          timeline-nya pecah jadi 3+1, yang membaca sebagai kesalahan layout
-          alih-alih satu rel utuh.
-        */}
-        <Surface as="ol" className="grid list-none grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-x-7">
+        <ol className="grid list-none grid-cols-[repeat(auto-fit,minmax(230px,1fr))] border-t border-forest/16">
           {timeline.map((item, i) => (
             <li
               key={item.year}
@@ -266,7 +266,9 @@ function HistoryPreview() {
               // before:* menggambar simpul emas di atas rel. Di bawah 900px kolomnya
               // menumpuk, jadi garis pemisah pindah dari kanan ke bawah.
               className={cx(
-                'relative border-t border-forest/16 pt-8 pb-2',
+                'relative border-forest/10 py-8 pr-8',
+                'border-b max-[900px]:last:border-b-0',
+                'min-[901px]:border-b-0 min-[901px]:border-r min-[901px]:last:border-r-0',
                 "before:absolute before:-top-[4.5px] before:left-0 before:h-2 before:w-2 before:rounded-full before:bg-gold before:content-['']",
               )}
             >
@@ -275,7 +277,7 @@ function HistoryPreview() {
               <p className="pr-4 text-[0.92rem] leading-[1.8] text-ink-soft">{item.body}</p>
             </li>
           ))}
-        </Surface>
+        </ol>
       </Wrap>
     </Section>
   );
@@ -296,11 +298,15 @@ function RoyalHousePreview() {
           </LinkMore>
         </SectionHead>
 
-        {/* Cuplikan silsilah — meniru "STRUKTUR KELUARGA KERAJAAN" di moodboard. */}
-        <Surface
+        {/*
+          Cuplikan silsilah — meniru "STRUKTUR KELUARGA KERAJAAN" di moodboard.
+          Kotaknya dipertahankan sebagai diagram, bukan sebagai panel kontras:
+          band sudah menanggung keterbacaannya, jadi tint di sini murni untuk
+          memisahkan bagan dari teks di sekitarnya.
+        */}
+        <div
           data-reveal=""
-          pad={false}
-          className="mb-16 flex flex-col items-center px-8 py-16"
+          className="mb-16 flex flex-col items-center rounded-lg border border-gold/28 bg-paper/55 px-8 py-16"
         >
           <div className={GENEALOGY_BOX}>
             <p className={GENEALOGY_NAME}>SULTAN AGUNG</p>
@@ -322,7 +328,7 @@ function RoyalHousePreview() {
               </div>
             ))}
           </div>
-        </Surface>
+        </div>
 
         <CardGrid>
           {royalHouseCards.map((card, i) => (
@@ -454,11 +460,9 @@ function Card({ title, body, delay = 0, tall = false }) {
 
 /*
   Tint sepenuh-section (dulu bg-paper/58) dibuang. Itu peninggalan dari saat
-  scrim global masih 0.72 di beat ini — di atas render yang waktu itu sudah
-  hampir krem, ia terbaca sebagai pita halus. Dengan scrim sekarang 0.22, cat
-  58% di atas massa pendopo gelap justru jadi kabut kelabu, persis hasil yang
-  dihindari SCRIM_PATH. Kontrasnya sudah dibawa wash di kepala section dan latar
-  kartunya masing-masing.
+  tiap section harus mengurus kontrasnya sendiri; sekarang section ini berada di
+  dalam band kedua, jadi lapisan cat tambahan hanya menumpuk di atas pelat yang
+  sudah ada dan membuat bandnya belang di satu section saja.
 */
 function ArchivePreview() {
   return (
@@ -530,13 +534,13 @@ function News() {
       <Wrap>
         <SectionHead kicker="News & Events" title="Kabar dari Keraton" />
 
-        <Surface as="ul" className="list-none">
+        <ul className="list-none border-t border-forest/16">
           {news.map((item, i) => (
             <li
               key={item.title}
               data-reveal=""
               data-reveal-delay={(i * 0.05).toFixed(2)}
-              className="grid grid-cols-1 items-baseline gap-2 border-b border-forest/12 py-8 transition-[padding-left] duration-500 ease-heritage first:pt-0 last:border-b-0 last:pb-0 hover:pl-3.5 min-[761px]:grid-cols-[110px_1fr_auto] min-[761px]:gap-8"
+              className="grid grid-cols-1 items-baseline gap-2 border-b border-forest/12 py-8 transition-[padding-left] duration-500 ease-heritage hover:pl-3.5 min-[761px]:grid-cols-[110px_1fr_auto] min-[761px]:gap-8"
             >
               <span className="text-[0.66rem] font-medium tracking-[0.18em] uppercase text-gold-deep">
                 {item.tag}
@@ -547,7 +551,7 @@ function News() {
               <span className="text-[0.8rem] whitespace-nowrap text-ink-soft">{item.date}</span>
             </li>
           ))}
-        </Surface>
+        </ul>
       </Wrap>
     </Section>
   );

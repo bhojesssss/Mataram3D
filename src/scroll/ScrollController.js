@@ -1,7 +1,7 @@
 import Lenis from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { beats, resolveBeats } from '../config/tokens.js';
+import { resolveBeats } from '../config/tokens.js';
 import { publishProgress, setSmoothScroll } from './scrollBus.js';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -10,8 +10,8 @@ gsap.registerPlugin(ScrollTrigger);
  * Ties page scroll to the 3D scene and to the DOM reveals.
  *
  * There is exactly one source of truth for "where are we": Lenis's smoothed scroll
- * position, normalised to 0→1. The camera, the lighting, the scrim, and the nav all
- * read that same number. Nothing here observes raw wheel events, which is why the
+ * position, normalised to 0→1. The camera, the lighting, and the nav all read
+ * that same number. Nothing here observes raw wheel events, which is why the
  * 3D and the copy can never disagree about which beat is on screen.
  *
  * Lenis smooths the input; CameraRig damps the response. Two stages of smoothing
@@ -20,57 +20,30 @@ gsap.registerPlugin(ScrollTrigger);
  * once it is moving. Together they are what "smooth" actually means here.
  */
 
-/**
- * Scrim opacity per beat.
- *
+/*
  * ─────────────────────────────────────────────────────────────────────────────
- * Dulu kurva ini yang memikul seluruh keterbacaan, dan itu sebabnya nilainya
- * harus sampai 0.84 — teks duduk langsung di atas canvas, jadi satu-satunya cara
- * menaikkan kontrasnya adalah menutupi seluruh layar.
+ * SCRIM SUDAH TIDAK ADA — jangan dihidupkan lagi.
  *
- * Masalahnya, scrim itu seragam sementara render-nya tidak. Langit terang dan
- * massa pendopo gelap ada di layar yang sama, jadi angka yang cukup untuk teks
- * di atas atap selalu kelewat pekat untuk teks di atas langit. Yang terukur:
- * pada 0.10 teks forest di atas sirap cuma 1.02:1 — hilang total — sementara di
- * atas langit sudah 7.93:1 dan tidak butuh apa-apa.
+ * Dulu di sini ada SCRIM_PATH: satu lapis krem sepenuh viewport yang
+ * opacity-nya digerakkan scroll, dan yang memikul seluruh keterbacaan halaman.
+ * Ia tidak pernah bisa benar, karena scrim itu seragam sementara render-nya
+ * tidak — langit terang dan massa pendopo gelap ada di layar yang sama. Angka
+ * yang cukup untuk teks di atas atap selalu kelewat pekat untuk teks di atas
+ * langit. Terukur: pada 0.10, teks forest di atas sirap cuma 1.02:1 (hilang
+ * total) sementara di atas langit sudah 7.93:1 dan tidak butuh apa-apa. Pada
+ * 0.84 teksnya aman tapi pendoponya jadi hantu sepanjang halaman.
  *
- * Sekarang kontras dibawa masing-masing blok lewat sistem `surface`
- * (components/ui/Surface.jsx), yang dijamin ≥4.5:1 di kasus terburuk bahkan
- * dengan scrim NOL. Jadi kurva ini tidak lagi bertugas menjaga keterbacaan, dan
- * turun ke peran aslinya: mengatur kedalaman — sedikit menjauhkan render saat
- * pembaca sedang membaca, membukanya penuh saat tidak.
+ * Penggantinya <Band> (components/ui/Band.jsx): pelat paper yang menutupi
+ * render hanya di sepanjang rentang baca, dan berhenti tepat di Palace. Karena
+ * ia dipotong menurut narasi dan bukan digerakkan scroll, tidak ada lagi yang
+ * perlu disamplingkan per frame di sini — dan halaman ini kehilangan satu
+ * elemen fixed sepenuh layar beserta seluruh pekerjaan compositing-nya.
  *
- * Nilainya karena itu jauh lebih rendah dari sebelumnya (puncak 0.28, bukan
- * 0.84). Efek bersihnya: pendoponya justru lebih terlihat sepanjang halaman
- * daripada sebelum perubahan ini.
+ * Kalau nanti butuh menggelapkan atau meredupkan render pada beat tertentu,
+ * tempatnya LIGHT_PATH di Scene.js (itu mengubah cahaya scene-nya sendiri),
+ * bukan lapisan cat baru di atas canvas.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-const SCRIM_PATH = [
-  { beat: 'hero', v: 0.0 },
-  { beat: 'approach', v: 0.12 },
-  { beat: 'threshold', v: 0.18 },
-  // Tetap yang terendah setelah hero. Ini beat Palace — payoff seluruh scroll,
-  // dan satu-satunya tempat penari terbaca sebagai penari.
-  { beat: 'interior', v: 0.06 },
-  { beat: 'ascend', v: 0.18 },
-  { beat: 'compound', v: 0.22 },
-  { beat: 'horizon', v: 0.26 },
-  { beat: 'end', v: 0.28 },
-];
-
-function sampleKeys(keys, t) {
-  const n = keys.length;
-  if (t <= keys[0].t) return keys[0].v;
-  if (t >= keys[n - 1].t) return keys[n - 1].v;
-  for (let i = 0; i < n - 1; i++) {
-    if (t >= keys[i].t && t <= keys[i + 1].t) {
-      const local = (t - keys[i].t) / (keys[i + 1].t - keys[i].t);
-      const eased = local * local * (3 - 2 * local);
-      return keys[i].v + (keys[i + 1].v - keys[i].v) * eased;
-    }
-  }
-  return keys[n - 1].v;
-}
 
 export class ScrollController {
   constructor(scene) {
@@ -80,8 +53,6 @@ export class ScrollController {
     this.reducedMotion =
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
-    this.scrim = document.getElementById('scrim');
-
     this._measure();
     this._initLenis();
     this._initReveals();
@@ -90,15 +61,11 @@ export class ScrollController {
 
   /**
    * Read the real section positions and push the resulting beat table into the
-   * scene. Everything timed against scroll — camera, lighting, scrim — is anchored
+   * scene. Everything timed against scroll — camera and lighting — is anchored
    * from this one measurement.
    */
   _measure() {
     this.beats = resolveBeats();
-    this.scrimKeys = SCRIM_PATH.map((k) => ({
-      v: k.v,
-      t: this.beats[k.beat] ?? beats[k.beat],
-    }));
     this.scene.retime(this.beats);
   }
 
@@ -154,10 +121,6 @@ export class ScrollController {
   /** Push the current progress into everything that depends on it. */
   _apply() {
     this.scene.setProgress(this.progress);
-
-    if (this.scrim) {
-      this.scrim.style.opacity = sampleKeys(this.scrimKeys, this.progress).toFixed(3);
-    }
 
     // The navbar reads this to decide when it goes solid; see scrollBus.js.
     publishProgress(this.progress);

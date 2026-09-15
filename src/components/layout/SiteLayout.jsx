@@ -35,7 +35,7 @@ export function SiteLayout() {
       />
       <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
 
-      {/* z-[2] menaruh konten di atas canvas 3D dan scrim yang fixed di homepage. */}
+      {/* z-[2] menaruh konten di atas canvas 3D yang fixed di homepage. */}
       <main id="main" className="relative z-[2]">
         <Outlet />
       </main>
