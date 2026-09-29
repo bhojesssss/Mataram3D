@@ -3,7 +3,9 @@ import { Link, NavLink } from 'react-router-dom';
 import { cx } from '@/lib/cx';
 import { mainLinks } from '@/data/navigation';
 import { subscribeProgress } from '@/scroll/scrollBus';
+import { useLanguage } from '@/i18n/LanguageContext';
 import { MenuIcon, Rosette, SearchIcon } from '@/components/ui/Icons';
+import { LanguageSwitch } from '@/components/ui/LanguageSwitch';
 
 /*
   Tiga kolom, bukan space-between. space-between hanya menyamakan jarak, jadi
@@ -29,6 +31,7 @@ const ICON =
 export function Nav({ variant = 'page', menuOpen = false, onOpenMenu }) {
   const heroPassed = useHeroPassed();
   const solid = variant === 'page' || heroPassed;
+  const { t } = useLanguage();
 
   return (
     <header
@@ -51,7 +54,10 @@ export function Nav({ variant = 'page', menuOpen = false, onOpenMenu }) {
         MATARAM
       </Link>
 
-      <nav aria-label="Navigasi utama" className="col-start-2 flex justify-self-center gap-[clamp(14px,2.2vw,34px)] max-[760px]:hidden">
+      <nav
+        aria-label={t({ id: 'Navigasi utama', en: 'Main navigation' })}
+        className="col-start-2 flex justify-self-center gap-[clamp(14px,2.2vw,34px)] max-[760px]:hidden"
+      >
         {mainLinks.map((link) => (
           <NavLink
             key={link.to}
@@ -65,13 +71,14 @@ export function Nav({ variant = 'page', menuOpen = false, onOpenMenu }) {
               'aria-[current=page]:opacity-100 aria-[current=page]:after:scale-x-100',
             )}
           >
-            {link.label}
+            {t(link.label)}
           </NavLink>
         ))}
       </nav>
 
-      <div className="col-start-3 flex justify-self-end gap-2">
-        <Link to="/archive" aria-label="Cari di arsip" className={ICON}>
+      <div className="col-start-3 flex items-center justify-self-end gap-2">
+        <LanguageSwitch />
+        <Link to="/archive" aria-label={t({ id: 'Cari di arsip', en: 'Search the archive' })} className={ICON}>
           <SearchIcon />
         </Link>
         {/* Hamburger hanya untuk mobile — di desktop menu utamanya sudah tampil penuh. */}
@@ -80,7 +87,7 @@ export function Nav({ variant = 'page', menuOpen = false, onOpenMenu }) {
           onClick={onOpenMenu}
           aria-controls="menu"
           aria-expanded={menuOpen}
-          aria-label="Buka menu"
+          aria-label={t({ id: 'Buka menu', en: 'Open menu' })}
           className={cx(ICON, 'hidden max-[760px]:grid')}
         >
           <MenuIcon />

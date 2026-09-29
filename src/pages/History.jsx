@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { cx } from '@/lib/cx';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { useLanguage } from '@/i18n/LanguageContext';
 import { eras, historicPlaces } from '@/data/eras';
 import { Wrap } from '@/components/ui/Wrap';
 import { Frame } from '@/components/ui/Frame';
@@ -12,9 +13,14 @@ import { DisplayHeading, PageHeader, Prose, PSection } from '@/components/ui/Pag
 const INITIAL_ERA = 2;
 
 export default function History() {
+  const { t } = useLanguage();
+
   usePageMeta(
-    'History — Mataram',
-    'From a granted forest to two courts. Nine moments that shaped the kingdom of Mataram, 1558 to 1755.',
+    t({ id: 'Sejarah — Mataram', en: 'History — Mataram' }),
+    t({
+      id: 'Dari hutan yang dianugerahkan hingga dua istana. Sembilan momen yang membentuk kerajaan Mataram, 1558 hingga 1755.',
+      en: 'From a granted forest to two courts. Nine moments that shaped the kingdom of Mataram, 1558 to 1755.',
+    }),
   );
 
   const [index, setIndex] = useState(INITIAL_ERA);
@@ -22,15 +28,18 @@ export default function History() {
   return (
     <>
       <PageHeader
-        eyebrow="History"
+        eyebrow={t({ id: 'Sejarah', en: 'History' })}
         title={
           <>
-            A Kingdom
+            {t({ id: 'Sebuah Kerajaan', en: 'A Kingdom' })}
             <br />
-            <em>Through Time</em>
+            <em>{t({ id: 'Sepanjang Masa', en: 'Through Time' })}</em>
           </>
         }
-        lede="From a granted forest to two courts. Move along the line to follow the kingdom through the moments that changed it."
+        lede={t({
+          id: 'Dari hutan yang dianugerahkan hingga dua istana. Susuri garis waktunya untuk mengikuti kerajaan ini lewat momen-momen yang mengubahnya.',
+          en: 'From a granted forest to two courts. Move along the line to follow the kingdom through the moments that changed it.',
+        })}
       />
 
       <EraRail index={index} onSelect={setIndex} />
@@ -51,6 +60,7 @@ export default function History() {
  * jadi isiannya selalu melewati atau kurang dari belah ketupat yang dituju.
  */
 function EraRail({ index, onSelect }) {
+  const { t } = useLanguage();
   const trackRef = useRef(null);
   const innerRef = useRef(null);
   const dotRefs = useRef([]);
@@ -132,7 +142,7 @@ function EraRail({ index, onSelect }) {
 
   return (
     <section
-      aria-label="Garis waktu Mataram"
+      aria-label={t({ id: 'Garis waktu Mataram', en: 'Timeline of Mataram' })}
       onKeyDown={onKeyDown}
       className="bg-cream px-[clamp(18px,2.4vw,36px)] py-[clamp(28px,3.4vw,52px)]"
     >
@@ -140,10 +150,18 @@ function EraRail({ index, onSelect }) {
         <div className="mb-[22px] flex items-center justify-between gap-3.5">
           <p className="text-[0.64rem] tracking-[0.3em] uppercase text-ink/72">1558 &mdash; 1755</p>
           <div className="flex gap-2">
-            <StepButton label="Era sebelumnya" disabled={index === 0} onClick={() => select(index - 1)}>
+            <StepButton
+              label={t({ id: 'Era sebelumnya', en: 'Previous era' })}
+              disabled={index === 0}
+              onClick={() => select(index - 1)}
+            >
               &#8592;
             </StepButton>
-            <StepButton label="Era berikutnya" disabled={index === last} onClick={() => select(index + 1)}>
+            <StepButton
+              label={t({ id: 'Era berikutnya', en: 'Next era' })}
+              disabled={index === last}
+              onClick={() => select(index + 1)}
+            >
               &#8594;
             </StepButton>
           </div>
@@ -164,7 +182,11 @@ function EraRail({ index, onSelect }) {
               style={{ left: line.left, top: line.top, width: line.fill }}
             />
 
-            <div role="tablist" aria-label="Pilih era" className="flex list-none gap-[clamp(10px,1.2vw,18px)] p-[0.6rem]">
+            <div
+              role="tablist"
+              aria-label={t({ id: 'Pilih era', en: 'Select an era' })}
+              className="flex list-none gap-[clamp(10px,1.2vw,18px)] p-[0.6rem]"
+            >
               {eras.map((era, i) => (
                 <div key={era.year} className="min-w-[clamp(74px,7.6vw,100px)] flex-1 basis-0">
                   <button
@@ -195,7 +217,7 @@ function EraRail({ index, onSelect }) {
                         i === index ? 'text-gold-deep' : 'text-ink/72',
                       )}
                     >
-                      {era.tag}
+                      {t(era.tag)}
                     </span>
                   </button>
                 </div>
@@ -244,8 +266,10 @@ function Diamond({ ref, active }) {
 /* ── detail era ──────────────────────────────────────────────────────────── */
 
 function EraDetail({ era }) {
+  const { t } = useLanguage();
+
   return (
-    <section aria-label="Detail era" className="bg-cream pb-[clamp(60px,7vw,110px)]">
+    <section aria-label={t({ id: 'Detail era', en: 'Era detail' })} className="bg-cream pb-[clamp(60px,7vw,110px)]">
       <Wrap>
         <div
           id="era-panel"
@@ -259,9 +283,9 @@ function EraDetail({ era }) {
         >
           <Frame
             src={era.image}
-            alt={era.alt}
-            label="Historical image"
-            tag={era.tag}
+            alt={t(era.alt)}
+            label={t({ id: 'Gambar sejarah', en: 'Historical image' })}
+            tag={t(era.tag)}
             className="h-[clamp(220px,58vw,300px)] min-[761px]:h-[clamp(280px,34vw,500px)]"
           />
 
@@ -270,10 +294,10 @@ function EraDetail({ era }) {
               <span className="font-display text-[clamp(3.4rem,7vw,6.8rem)] leading-[0.9] text-gold-deep">{era.year}</span>
             </p>
             <h2 className="mb-5 font-display text-[clamp(1.6rem,3vw,2.75rem)] font-light leading-[1.15] text-forest">
-              {era.title}
+              {t(era.title)}
             </h2>
-            <p className="mb-7 text-[clamp(0.85rem,1.15vw,1.06rem)] leading-[1.95] text-ink/88 text-pretty">{era.body}</p>
-            <Dlink to="/archive">Related records</Dlink>
+            <p className="mb-7 text-[clamp(0.85rem,1.15vw,1.06rem)] leading-[1.95] text-ink/88 text-pretty">{t(era.body)}</p>
+            <Dlink to="/archive">{t({ id: 'Catatan terkait', en: 'Related records' })}</Dlink>
           </div>
         </div>
       </Wrap>
@@ -284,34 +308,54 @@ function EraDetail({ era }) {
 /* ── asal-usul + tempat bersejarah ───────────────────────────────────────── */
 
 function OriginsAndPlaces() {
+  const { t } = useLanguage();
+
   return (
     <PSection tone="paper">
       <Wrap>
         <Reveal className="mb-[clamp(36px,4vw,64px)] grid grid-cols-1 gap-[clamp(24px,3.2vw,64px)] min-[761px]:grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
           <div>
-            <Eyebrow>Origins</Eyebrow>
+            <Eyebrow>{t({ id: 'Asal Usul', en: 'Origins' })}</Eyebrow>
             <DisplayHeading>
-              Before there was
-              <br />a kingdom, there
-              <br />
-              was <em>a forest</em>.
+              {t({
+                id: (
+                  <>
+                    Sebelum ada
+                    <br />
+                    sebuah kerajaan, ada
+                    <br />
+                    <em>sebuah hutan</em>.
+                  </>
+                ),
+                en: (
+                  <>
+                    Before there was
+                    <br />a kingdom, there
+                    <br />
+                    was <em>a forest</em>.
+                  </>
+                ),
+              })}
             </DisplayHeading>
           </div>
           <div>
             <Prose>
-              Mataram does not begin with a conquest. It begins with a reward — a stretch of
-              woodland called Mentaok, handed to a loyal servant of Pajang who chose to clear it
-              rather than trade it.
+              {t({
+                id: 'Mataram tidak dimulai dari penaklukan. Ia dimulai dari sebuah hadiah — sebidang hutan bernama Mentaok, diserahkan kepada abdi setia Pajang yang memilih membukanya, bukan memperdagangkannya.',
+                en: 'Mataram does not begin with a conquest. It begins with a reward — a stretch of woodland called Mentaok, handed to a loyal servant of Pajang who chose to clear it rather than trade it.',
+              })}
             </Prose>
             <Prose dim>
-              Within one generation his son had declared a kingdom there. Within three, that kingdom
-              set the standard for Javanese language, dress, music, and time itself.
+              {t({
+                id: 'Dalam satu generasi, putranya telah memproklamasikan sebuah kerajaan di sana. Dalam tiga generasi, kerajaan itu menjadi standar bahasa, busana, musik, dan bahkan waktu itu sendiri di tanah Jawa.',
+                en: 'Within one generation his son had declared a kingdom there. Within three, that kingdom set the standard for Javanese language, dress, music, and time itself.',
+              })}
             </Prose>
           </div>
         </Reveal>
 
         <Reveal>
-          <Eyebrow>Historical Places</Eyebrow>
+          <Eyebrow>{t({ id: 'Situs Bersejarah', en: 'Historical Places' })}</Eyebrow>
         </Reveal>
 
         <Reveal className="grid grid-cols-2 gap-[clamp(12px,1.6vw,22px)] min-[521px]:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
@@ -322,14 +366,14 @@ function OriginsAndPlaces() {
             >
               <Frame
                 src={place.image}
-                alt={place.alt}
-                label="Place photo"
+                alt={t(place.alt)}
+                label={t({ id: 'Foto tempat', en: 'Place photo' })}
                 rounded={false}
                 className="h-[118px] min-[521px]:h-[clamp(140px,15vw,200px)]"
               />
               <div className="px-[18px] pt-[18px] pb-[22px]">
                 <h3 className="mb-[7px] font-display text-[1.3rem] text-forest">{place.title}</h3>
-                <p className="text-[0.72rem] tracking-[0.04em] text-ink-soft">{place.meta}</p>
+                <p className="text-[0.72rem] tracking-[0.04em] text-ink-soft">{t(place.meta)}</p>
               </div>
             </article>
           ))}

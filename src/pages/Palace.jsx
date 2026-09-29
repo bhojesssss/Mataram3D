@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { cx } from '@/lib/cx';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { useLanguage } from '@/i18n/LanguageContext';
 import { palaceNotes, spaces } from '@/data/palace';
 import { Wrap } from '@/components/ui/Wrap';
 import { Frame } from '@/components/ui/Frame';
@@ -9,9 +10,14 @@ import { Eyebrow } from '@/components/ui/Type';
 import { PageHeader, Prose, PSection } from '@/components/ui/Page';
 
 export default function Palace() {
+  const { t } = useLanguage();
+
   usePageMeta(
-    'Palace — Mataram',
-    'The keraton is laid on a single axis from the mountain in the north to the sea in the south. Read the plan of the palace compound, ground by ground.',
+    t({ id: 'Keraton — Mataram', en: 'Palace — Mataram' }),
+    t({
+      id: 'Keraton tertata pada satu sumbu tunggal dari gunung di utara hingga laut di selatan. Baca denah kompleks istananya, halaman demi halaman.',
+      en: 'The keraton is laid on a single axis from the mountain in the north to the sea in the south. Read the plan of the palace compound, ground by ground.',
+    }),
   );
 
   // Denah itu satu-satunya kontrol; kartu di sebelahnya cuma menampilkan apa
@@ -23,18 +29,21 @@ export default function Palace() {
   return (
     <>
       <PageHeader
-        eyebrow="The Palace"
+        eyebrow={t({ id: 'Istana', en: 'The Palace' })}
         title={
           <>
-            Reading the
+            {t({ id: 'Membaca', en: 'Reading the' })}
             <br />
-            <em>Keraton</em>
+            <em>{t({ id: 'Keraton', en: 'Keraton' })}</em>
           </>
         }
-        lede="The compound is laid on a single axis from the mountain in the north to the sea in the south. Touch any ground on the plan to learn what happens there."
+        lede={t({
+          id: 'Kompleks ini tertata pada satu sumbu dari gunung di utara hingga laut di selatan. Sentuh area mana pun di denah untuk mempelajari apa yang terjadi di sana.',
+          en: 'The compound is laid on a single axis from the mountain in the north to the sea in the south. Touch any ground on the plan to learn what happens there.',
+        })}
       />
 
-      <PSection aria-label="Denah keraton">
+      <PSection aria-label={t({ id: 'Denah keraton', en: 'Palace plan' })}>
         <Wrap>
           {/* items-center, bukan items-start: kartu detail lebih pendek daripada
               denah di sebelahnya, jadi dirata-tengahkan terhadap denah itu. */}
@@ -44,17 +53,17 @@ export default function Palace() {
             <div aria-live="polite" className="overflow-hidden rounded-lg border border-forest/18 bg-paper">
               <Frame
                 src="/img/pendopo-interior.png"
-                alt="Interior pendopo keraton."
-                label="Space photo"
+                alt={t({ id: 'Interior pendopo keraton.', en: 'Interior of the palace pendopo.' })}
+                label={t({ id: 'Foto ruang', en: 'Space photo' })}
                 rounded={false}
                 className="h-[clamp(160px,17vw,240px)] border-0"
               />
               <div className="p-[clamp(22px,2.6vw,34px)]">
-                <p className="mb-3.5 text-[0.64rem] tracking-[0.28em] uppercase text-gold-deep">{active.en}</p>
+                <p className="mb-3.5 text-[0.64rem] tracking-[0.28em] uppercase text-gold-deep">{t(active.gloss)}</p>
                 <h2 className="mb-4 font-display text-[clamp(1.5rem,2.6vw,2.35rem)] font-light leading-[1.15] text-forest">
                   {active.name}
                 </h2>
-                <p className="text-[0.88rem] leading-[1.9] text-ink/88 text-pretty">{active.desc}</p>
+                <p className="text-[0.88rem] leading-[1.9] text-ink/88 text-pretty">{t(active.desc)}</p>
               </div>
             </div>
           </div>
@@ -64,13 +73,13 @@ export default function Palace() {
       <PSection tone="paper">
         <Wrap>
           <Reveal>
-            <Eyebrow>Symbols &amp; Palace Life</Eyebrow>
+            <Eyebrow>{t({ id: 'Simbol & Kehidupan Istana', en: 'Symbols & Palace Life' })}</Eyebrow>
           </Reveal>
           <Reveal className="grid grid-cols-[repeat(auto-fit,minmax(230px,1fr))] gap-[clamp(18px,2.4vw,44px)]">
             {palaceNotes.map((note) => (
-              <article key={note.title} className="border-t border-forest/25 pt-[22px]">
-                <h2 className="mb-3 font-display text-[clamp(1.35rem,2.2vw,1.85rem)] text-forest">{note.title}</h2>
-                <Prose dim>{note.body}</Prose>
+              <article key={note.title.en} className="border-t border-forest/25 pt-[22px]">
+                <h2 className="mb-3 font-display text-[clamp(1.35rem,2.2vw,1.85rem)] text-forest">{t(note.title)}</h2>
+                <Prose dim>{t(note.body)}</Prose>
               </article>
             ))}
           </Reveal>
@@ -88,12 +97,14 @@ export default function Palace() {
  * halaman dalam di bawahnya terbelah kiri, tengah, kanan.
  */
 function PlanBoard({ activeId, onSelect }) {
+  const { t } = useLanguage();
+
   return (
     <div>
       <p className="mb-4 flex items-center justify-between gap-3 text-[0.6rem] tracking-[0.3em] uppercase text-ink/72">
-        <span>Palace plan &middot; schematic</span>
+        <span>{t({ id: 'Denah keraton · skematik', en: 'Palace plan · schematic' })}</span>
         <span className="flex items-center gap-[7px] text-gold-deep">
-          N <span aria-hidden="true">&#8593;</span>
+          {t({ id: 'U', en: 'N' })} <span aria-hidden="true">&#8593;</span>
         </span>
       </p>
 
@@ -103,7 +114,7 @@ function PlanBoard({ activeId, onSelect }) {
 
         <div
           role="group"
-          aria-label="Pilih ruang keraton"
+          aria-label={t({ id: 'Pilih ruang keraton', en: 'Select a palace ground' })}
           // Di bawah 520px skematiknya kehilangan bentuk, jadi diberi ruang vertikal tetap.
           className={cx(
             'relative grid grid-cols-3 grid-rows-[0.9fr_0.8fr_0.8fr_0.5fr_1.15fr_1.15fr_0.9fr]',

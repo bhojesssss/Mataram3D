@@ -293,49 +293,60 @@ export function roofMaps() {
 }
 
 /**
- * Batik — the parang-inspired diagonal motif from the moodboard's cloth swatch.
- * Used on the tumpang sari ceiling panels and the interior frieze.
+ * Batik — a soft parang-inspired wash for the tumpang-sari soffits, in the
+ * cloth's own palette (forest, sage, gold, cream).
+ *
+ * This used to be a printed diagonal motif — repeating blades, the actual
+ * parang pattern. That read well at the `interior` beat but broke at
+ * `ascend`: the panels are viewed almost edge-on there, and no printed
+ * pattern survives that angle. Repeating content needs anisotropic
+ * filtering to resolve, and 16x (the practical hardware ceiling) isn't
+ * enough once the panel is close to edge-on — blurring or downsampling the
+ * print only pushed the aliasing threshold a little further out, it never
+ * removed it, because *any* periodic content aliases once the viewing
+ * angle is steep enough. A gradient doesn't have that failure mode: it has
+ * no repeat to alias, at any angle. So the motif here is now soft diagonal
+ * bands of colour and a few wide, low-contrast blooms — same palette, same
+ * diagonal grain as the parang print, no period for filtering to lose.
  */
 export function batikMaps() {
-  // Cloth, so barely any relief — just enough for the weave to catch lantern light.
-  return pbr('batik', { normalStrength: 1.1, rough: [0.5, 0.85] }, () => {
+  // Cloth, so barely any relief — just enough to catch lantern light.
+  return pbr('batik', { normalStrength: 0.5, rough: [0.55, 0.82] }, () => {
     const c = canvas(512);
     const g = c.getContext('2d');
     g.fillStyle = palette.cream;
     g.fillRect(0, 0, 512, 512);
 
-    // Parang: repeating diagonal blades.
+    // Soft diagonal grain, echoing the parang's angle without repeating it.
     g.save();
     g.translate(256, 256);
     g.rotate(-Math.PI / 4);
     g.translate(-256, -256);
-
-    for (let band = -512; band < 1024; band += 74) {
-      g.fillStyle = palette.forest;
-      g.globalAlpha = 0.82;
-      g.beginPath();
-      g.roundRect(band, -512, 34, 1536, 17);
-      g.fill();
-
-      g.globalAlpha = 1;
-      g.fillStyle = palette.gold;
-      for (let y = -512; y < 1024; y += 74) {
-        g.beginPath();
-        g.ellipse(band + 17, y, 9, 21, 0, 0, Math.PI * 2);
-        g.fill();
-      }
-
-      // Thin sage separator between blades.
-      g.strokeStyle = palette.sage;
-      g.globalAlpha = 0.5;
-      g.lineWidth = 2.5;
-      g.beginPath();
-      g.moveTo(band + 52, -512);
-      g.lineTo(band + 52, 1024);
-      g.stroke();
-      g.globalAlpha = 1;
-    }
+    const grain = g.createLinearGradient(0, 0, 512, 0);
+    grain.addColorStop(0, palette.forest);
+    grain.addColorStop(0.45, palette.sage);
+    grain.addColorStop(0.55, palette.sage);
+    grain.addColorStop(1, palette.tan);
+    g.globalAlpha = 0.4;
+    g.fillStyle = grain;
+    g.fillRect(-256, -256, 1024, 1024);
+    g.globalAlpha = 1;
     g.restore();
+
+    // A few wide gold blooms — soft radial gradients, not repeating shapes —
+    // to give the wash some life under lantern light.
+    const blooms = [
+      [140, 160, 150],
+      [400, 340, 170],
+      [260, 470, 120],
+    ];
+    for (const [x, y, r] of blooms) {
+      const bloom = g.createRadialGradient(x, y, 0, x, y, r);
+      bloom.addColorStop(0, 'rgba(224, 188, 107, 0.32)');
+      bloom.addColorStop(1, 'rgba(224, 188, 107, 0)');
+      g.fillStyle = bloom;
+      g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
 
     return c;
   });

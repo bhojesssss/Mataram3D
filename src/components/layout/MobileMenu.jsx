@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { cx } from '@/lib/cx';
 import { contactEmail, mainLinks, moreLinks } from '@/data/navigation';
+import { useLanguage } from '@/i18n/LanguageContext';
 import { HashLink } from '@/components/ui/HashLink';
+import { LanguageSwitch } from '@/components/ui/LanguageSwitch';
 
 /**
  * Overlay navigasi layar penuh.
@@ -13,6 +15,7 @@ import { HashLink } from '@/components/ui/HashLink';
 export function MobileMenu({ open, onClose }) {
   const closeRef = useRef(null);
   const lastFocused = useRef(null);
+  const { t } = useLanguage();
 
   // Kunci scroll, pindahkan fokus ke tombol tutup, kembalikan saat ditutup.
   useEffect(() => {
@@ -52,40 +55,47 @@ export function MobileMenu({ open, onClose }) {
     >
       <div className="flex items-center justify-between">
         <p className="font-display text-[1.2rem] tracking-[0.4em] indent-[0.4em] text-forest">MATARAM</p>
-        <button
-          ref={closeRef}
-          type="button"
-          onClick={onClose}
-          aria-label="Tutup menu"
-          className="grid h-[42px] w-[42px] cursor-pointer place-items-center rounded-lg border border-forest/25 text-base text-forest transition-colors duration-[350ms] ease-heritage hover:bg-forest/12"
-        >
-          &#10005;
-        </button>
+        <div className="flex items-center gap-2.5">
+          <LanguageSwitch />
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            aria-label={t({ id: 'Tutup menu', en: 'Close menu' })}
+            className="grid h-[42px] w-[42px] cursor-pointer place-items-center rounded-lg border border-forest/25 text-base text-forest transition-colors duration-[350ms] ease-heritage hover:bg-forest/12"
+          >
+            &#10005;
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 items-center">
         <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-[clamp(24px,5vw,56px)]">
-          <nav aria-label="Menu utama" className="flex flex-col gap-1.5">
-            <MenuLink to="/" onClose={onClose} end>Home</MenuLink>
+          <nav aria-label={t({ id: 'Menu utama', en: 'Main menu' })} className="flex flex-col gap-1.5">
+            <MenuLink to="/" onClose={onClose} end>{t({ id: 'Beranda', en: 'Home' })}</MenuLink>
             {mainLinks.map((link) => (
-              <MenuLink key={link.to} to={link.to} onClose={onClose}>{link.label}</MenuLink>
+              <MenuLink key={link.to} to={link.to} onClose={onClose}>{t(link.label)}</MenuLink>
             ))}
           </nav>
 
-          <nav aria-label="Menu lainnya" className="flex flex-col justify-center gap-3">
-            <h4 className="mb-1 text-[0.66rem] font-medium tracking-[0.28em] uppercase text-gold-deep">More</h4>
+          <nav aria-label={t({ id: 'Menu lainnya', en: 'More menu' })} className="flex flex-col justify-center gap-3">
+            <h4 className="mb-1 text-[0.66rem] font-medium tracking-[0.28em] uppercase text-gold-deep">
+              {t({ id: 'Lainnya', en: 'More' })}
+            </h4>
             {moreLinks.map((link) => (
-              <HashLink key={link.label} hash={link.hash} onClick={onClose} className={SECONDARY}>
-                {link.label}
+              <HashLink key={link.label.en} hash={link.hash} onClick={onClose} className={SECONDARY}>
+                {t(link.label)}
               </HashLink>
             ))}
-            <a href={`mailto:${contactEmail}`} className={SECONDARY}>Contact</a>
+            <a href={`mailto:${contactEmail}`} className={SECONDARY}>
+              {t({ id: 'Kontak', en: 'Contact' })}
+            </a>
           </nav>
         </div>
       </div>
 
       <p className="border-t border-forest/18 pt-5 text-[0.66rem] tracking-[0.16em] text-ink/72">
-        KERATON SURAKARTA HADININGRAT &middot; JAVA
+        {t({ id: 'KERATON SURAKARTA HADININGRAT · JAWA', en: 'KERATON SURAKARTA HADININGRAT · JAVA' })}
       </p>
     </div>
   );

@@ -1,5 +1,6 @@
 import { cx } from '@/lib/cx';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { useLanguage } from '@/i18n/LanguageContext';
 import { Wrap } from '@/components/ui/Wrap';
 import { Band } from '@/components/ui/Band';
 import { Surface } from '@/components/ui/Surface';
@@ -30,12 +31,22 @@ import {
   atau halo sendiri. Yang butuh perhatian justru sebaliknya: menaruh sesuatu
   di LUAR band (seperti Palace) berarti mengambil alih tanggung jawab kontras
   section itu. Alasan lengkapnya di components/ui/Band.jsx.
+
+  BAHASA: seluruh copy di file ini dibungkus `t({ id, en })` dari
+  LanguageContext. Konten daftar (kartu, timeline, dst.) sudah bilingual di
+  data/home.js; yang ditulis literal di sini (kicker, judul section, hero)
+  dibungkus langsung di tempat pakainya.
 */
 
 export default function Home() {
+  const { t } = useLanguage();
+
   usePageMeta(
-    'Mataram — The Royal Heritage',
-    'Sebuah warisan luhur yang hidup dalam sejarah, budaya, dan nilai-nilai Jawa. Digital heritage experience Istana Mataram.',
+    t({ id: 'Mataram — Warisan Luhur Kerajaan', en: 'Mataram — The Royal Heritage' }),
+    t({
+      id: 'Sebuah warisan luhur yang hidup dalam sejarah, budaya, dan nilai-nilai Jawa. Digital heritage experience Istana Mataram.',
+      en: 'A noble heritage that lives on in history, culture, and Javanese values. A digital heritage experience of the Mataram Palace.',
+    }),
   );
 
   /*
@@ -60,6 +71,22 @@ export default function Home() {
       </Band>
 
       <PalaceBeat />
+
+      {/*
+        Jangkar `ascend` (lihat config/tokens.js) — tinggi nol, sengaja diletakkan
+        tepat di batas Palace/Band, BUKAN di dalam Culture seperti sebelumnya.
+        Beat itu mengangkat kamera lurus ke tumpang sari, bagian paling terang di
+        seluruh scene, dan kalau ia dipusatkan di section Culture ia mendarat
+        tepat di belakang heading "A Culture Still Breathing" — band-plate
+        (alpha 0.88, dikalibrasi untuk atap gelap) tidak cukup pekat menutupi
+        pola berlian emas yang seterang itu, dan hasilnya kelihatan seperti
+        render dobel/rusak di belakang teks.
+        Dengan jangkar di sini, puncak `ascend` jatuh saat batas ini baru
+        separuh layar — sebelum padding-top Band + Section sempat membawa
+        pembaca ke heading — sehingga pada saat heading benar-benar terlihat,
+        kamera sudah bergerak ke arah `compound` (aerial, jauh lebih tenang).
+      */}
+      <div data-section="ascend-reveal" aria-hidden="true" className="h-0" />
 
       <Band fade="top">
         <Culture />
@@ -86,11 +113,12 @@ function Section({ id, center = false, className, children }) {
 }
 
 function SectionHead({ kicker, title, center = false, children }) {
+  const { t } = useLanguage();
   return (
     <header className={cx('mb-16 max-w-[60ch]', center && 'mx-auto')}>
-      <Kicker data-reveal="">{kicker}</Kicker>
+      <Kicker data-reveal="">{t(kicker)}</Kicker>
       <SectionTitle data-reveal="" data-reveal-delay="0.06">
-        {title}
+        {t(title)}
       </SectionTitle>
       {children}
     </header>
@@ -100,6 +128,8 @@ function SectionHead({ kicker, title, center = false, children }) {
 /* ── hero ────────────────────────────────────────────────────────────────── */
 
 function Hero() {
+  const { t } = useLanguage();
+
   return (
     <section
       id="hero"
@@ -136,7 +166,7 @@ function Hero() {
           data-reveal=""
           className="halo m-0 font-display text-[clamp(1.15rem,2.4vw,1.75rem)] font-light italic text-forest opacity-90"
         >
-          The Royal Heritage of
+          {t({ id: 'Warisan Luhur dari', en: 'The Royal Heritage of' })}
         </p>
 
         <h1
@@ -157,13 +187,13 @@ function Hero() {
           data-reveal-delay="0.22"
           className="mx-auto mb-16 max-w-[40ch] text-[clamp(0.95rem,1.5vw,1.08rem)] leading-[1.9] text-ink"
         >
-          Sebuah warisan luhur yang hidup
+          {t({ id: 'Sebuah warisan luhur yang hidup', en: 'A noble heritage that lives on' })}
           <br />
-          dalam sejarah, budaya, dan nilai-nilai Jawa.
+          {t({ id: 'dalam sejarah, budaya, dan nilai-nilai Jawa.', en: 'in history, culture, and Javanese values.' })}
         </Surface>
 
         <ButtonGold href="#intro" data-reveal="" data-reveal-delay="0.3">
-          EXPLORE
+          {t({ id: 'JELAJAHI', en: 'EXPLORE' })}
         </ButtonGold>
       </div>
 
@@ -181,7 +211,9 @@ function Hero() {
           tersisa untuk `halo`, dan ia cukup di sini karena empat huruf
           berjarak lebar tidak punya celah dalam yang perlu diisi.
         */}
-        <span className="halo text-[0.6rem] tracking-[0.3em] indent-[0.3em] text-ink">SCROLL</span>
+        <span className="halo text-[0.6rem] tracking-[0.3em] indent-[0.3em] text-ink">
+          {t({ id: 'GULIR', en: 'SCROLL' })}
+        </span>
       </div>
     </section>
   );
@@ -190,21 +222,24 @@ function Hero() {
 /* ── introduction ────────────────────────────────────────────────────────── */
 
 function Introduction() {
+  const { t } = useLanguage();
+
   return (
     <Section id="intro" center>
       <Wrap narrow>
-        <Kicker data-reveal="">Introduction</Kicker>
+        <Kicker data-reveal="">{t({ id: 'Pengantar', en: 'Introduction' })}</Kicker>
         <SectionTitle data-reveal="" data-reveal-delay="0.06">
-          I Am Mataram
+          {t({ id: 'Akulah Mataram', en: 'I Am Mataram' })}
         </SectionTitle>
         <p
           data-reveal=""
           data-reveal-delay="0.12"
           className="mx-auto max-w-[58ch] text-[clamp(1.02rem,1.5vw,1.16rem)] leading-[1.85] text-ink-soft"
         >
-          Bukan sekadar kerajaan yang tercatat dalam buku sejarah, melainkan sebuah cara
-          memandang dunia — tempat manusia, penguasa, dan alam semesta berdiri dalam satu
-          keselarasan.
+          {t({
+            id: 'Bukan sekadar kerajaan yang tercatat dalam buku sejarah, melainkan sebuah cara memandang dunia — tempat manusia, penguasa, dan alam semesta berdiri dalam satu keselarasan.',
+            en: 'Not merely a kingdom recorded in history books, but a way of seeing the world — where people, ruler, and cosmos stand in a single harmony.',
+          })}
         </p>
 
         <figure data-reveal="" data-reveal-delay="0.18" className="mx-auto my-16 max-w-[32ch]">
@@ -212,7 +247,10 @@ function Introduction() {
             Manunggaling Kawula Gusti
           </blockquote>
           <figcaption className="text-[0.94rem] leading-[1.75] text-ink-soft">
-            Keselarasan antara manusia, raja, dan alam semesta.
+            {t({
+              id: 'Keselarasan antara manusia, raja, dan alam semesta.',
+              en: 'The harmony of people, ruler, and cosmos.',
+            })}
           </figcaption>
         </figure>
 
@@ -223,13 +261,13 @@ function Introduction() {
         >
           {values.map((value) => (
             <li
-              key={value}
+              key={value.en}
               className="inline-flex items-center gap-2.5 text-[0.74rem] font-medium tracking-[0.2em] text-forest"
             >
               <span aria-hidden="true" className="text-gold">
                 &#10022;
               </span>
-              {value}
+              {t(value)}
             </li>
           ))}
         </ul>
@@ -241,12 +279,17 @@ function Introduction() {
 /* ── history ─────────────────────────────────────────────────────────────── */
 
 function HistoryPreview() {
+  const { t } = useLanguage();
+
   return (
     <Section id="history">
       <Wrap>
-        <SectionHead kicker="A Kingdom Through Time" title="The Story of Mataram">
+        <SectionHead
+          kicker={{ id: 'Sebuah Kerajaan Sepanjang Masa', en: 'A Kingdom Through Time' }}
+          title={{ id: 'Kisah Mataram', en: 'The Story of Mataram' }}
+        >
           <LinkMore to="/history" data-reveal="" data-reveal-delay="0.1">
-            Jelajahi timeline
+            {t({ id: 'Jelajahi timeline', en: 'Explore the timeline' })}
           </LinkMore>
         </SectionHead>
 
@@ -273,8 +316,8 @@ function HistoryPreview() {
               )}
             >
               <span className="mb-2 block font-display text-[1.9rem] text-gold-deep">{item.year}</span>
-              <h3 className="mb-2.5 font-display text-[1.32rem] font-medium text-forest">{item.title}</h3>
-              <p className="pr-4 text-[0.92rem] leading-[1.8] text-ink-soft">{item.body}</p>
+              <h3 className="mb-2.5 font-display text-[1.32rem] font-medium text-forest">{t(item.title)}</h3>
+              <p className="pr-4 text-[0.92rem] leading-[1.8] text-ink-soft">{t(item.body)}</p>
             </li>
           ))}
         </ol>
@@ -289,12 +332,14 @@ const GENEALOGY_BOX = 'rounded-lg border border-forest/20 bg-paper px-[30px] py-
 const GENEALOGY_NAME = 'text-[0.76rem] font-medium tracking-[0.16em] leading-[1.6] text-forest';
 
 function RoyalHousePreview() {
+  const { t } = useLanguage();
+
   return (
     <Section id="royal-house">
       <Wrap>
-        <SectionHead kicker="The Royal House" title="Wangsa Mataram">
+        <SectionHead kicker={{ id: 'Wangsa Kerajaan', en: 'The Royal House' }} title={{ id: 'Wangsa Mataram', en: 'House of Mataram' }}>
           <LinkMore to="/royal-house" data-reveal="" data-reveal-delay="0.1">
-            Silsilah lengkap
+            {t({ id: 'Silsilah lengkap', en: 'Full genealogy' })}
           </LinkMore>
         </SectionHead>
 
@@ -302,7 +347,8 @@ function RoyalHousePreview() {
           Cuplikan silsilah — meniru "STRUKTUR KELUARGA KERAJAAN" di moodboard.
           Kotaknya dipertahankan sebagai diagram, bukan sebagai panel kontras:
           band sudah menanggung keterbacaannya, jadi tint di sini murni untuk
-          memisahkan bagan dari teks di sekitarnya.
+          memisahkan bagan dari teks di sekitarnya. Nama dan gelar di dalamnya
+          adalah proper noun, sama di kedua bahasa — tidak dibungkus t().
         */}
         <div
           data-reveal=""
@@ -332,7 +378,7 @@ function RoyalHousePreview() {
 
         <CardGrid>
           {royalHouseCards.map((card, i) => (
-            <Card key={card.title} delay={i * 0.06} {...card} />
+            <Card key={card.title.en} delay={i * 0.06} title={card.title} body={card.body} />
           ))}
         </CardGrid>
       </Wrap>
@@ -343,6 +389,8 @@ function RoyalHousePreview() {
 /* ── palace ──────────────────────────────────────────────────────────────── */
 
 function PalaceBeat() {
+  const { t } = useLanguage();
+
   return (
     <section id="palace" data-section="palace" className="py-[clamp(109px,13vw,156px)]">
       <Wrap>
@@ -353,7 +401,7 @@ function PalaceBeat() {
         */}
         <div className="ml-auto w-[min(100%,620px)] rounded-lg bg-forest/90 px-[clamp(22px,3vw,40px)] py-8 text-cream backdrop-blur-[3px]">
           <p data-reveal="" className="mb-4 text-[0.72rem] font-medium tracking-[0.26em] uppercase text-tan">
-            The Palace
+            {t({ id: 'Istana', en: 'The Palace' })}
           </p>
           <h2
             data-reveal=""
@@ -363,24 +411,39 @@ function PalaceBeat() {
             Pendopo
           </h2>
           <p data-reveal="" data-reveal-delay="0.12" className="mb-8 max-w-[52ch] text-cream/82">
-            Ruang terbuka utama di Keraton sebagai tempat menerima tamu dan upacara resmi. Empat{' '}
-            <em className="font-display text-[1.1em] italic text-tan">soko guru</em> menyangga atap
-            bertingkat, dan di atasnya{' '}
-            <em className="font-display text-[1.1em] italic text-tan">tumpang sari</em> menyusun
-            langit-langit berundak — sebuah pernyataan tentang tatanan.
+            {t({
+              id: (
+                <>
+                  Ruang terbuka utama di Keraton sebagai tempat menerima tamu dan upacara resmi. Empat{' '}
+                  <em className="font-display text-[1.1em] italic text-tan">soko guru</em> menyangga atap
+                  bertingkat, dan di atasnya{' '}
+                  <em className="font-display text-[1.1em] italic text-tan">tumpang sari</em> menyusun
+                  langit-langit berundak — sebuah pernyataan tentang tatanan.
+                </>
+              ),
+              en: (
+                <>
+                  The main open space in the Keraton for receiving guests and holding official
+                  ceremony. Four <em className="font-display text-[1.1em] italic text-tan">soko guru</em>{' '}
+                  pillars carry the tiered roof, and above them{' '}
+                  <em className="font-display text-[1.1em] italic text-tan">tumpang sari</em> forms a
+                  stepped ceiling — a statement about order.
+                </>
+              ),
+            })}
           </p>
           <LinkMore to="/palace" data-reveal="" data-reveal-delay="0.18" className="text-tan hover:text-paper">
-            Baca selengkapnya
+            {t({ id: 'Baca selengkapnya', en: 'Read more' })}
           </LinkMore>
 
           <ul data-reveal="" data-reveal-delay="0.1" className="mt-8 list-none border-t border-tan/28">
             {palaceIndex.map((label) => (
-              <li key={label}>
+              <li key={label.en}>
                 <a
                   href="#palace"
                   className="flex items-center justify-between gap-4 border-b border-tan/28 px-1 py-[17px] text-[0.88rem] text-cream no-underline transition-[padding,color] duration-[400ms] ease-heritage hover:pl-3.5 hover:text-tan"
                 >
-                  <span>{label}</span>
+                  <span>{t(label)}</span>
                   <span aria-hidden="true">&rarr;</span>
                 </a>
               </li>
@@ -398,10 +461,17 @@ function Culture() {
   return (
     <Section id="culture">
       <Wrap>
-        <SectionHead kicker="The Living Heritage" title="Budaya yang Masih Bernapas" />
-        <CardGrid>
+        <SectionHead
+          kicker={{ id: 'Warisan yang Masih Hidup', en: 'The Living Heritage' }}
+          title={{ id: 'Budaya yang Masih Bernapas', en: 'A Culture Still Breathing' }}
+        />
+        {/* min="300px" (bukan default 260px) supaya enam kartu memenuhi 3 kolom
+            persis — di lebar konten 1100px, 260px menghasilkan 4 kolom dan
+            menyisakan 2 sel kosong di baris kedua yang menampakkan scene 3D
+            di baliknya. */}
+        <CardGrid min="300px">
           {cultureCards.map((card, i) => (
-            <Card key={card.title} delay={i * 0.05} {...card} />
+            <Card key={card.title.en} delay={i * 0.05} title={card.title} body={card.body} />
           ))}
         </CardGrid>
       </Wrap>
@@ -413,10 +483,13 @@ function Discover() {
   return (
     <Section id="discover">
       <Wrap>
-        <SectionHead kicker="Discover Mataram" title="Menyusuri Jejaknya" />
+        <SectionHead
+          kicker={{ id: 'Jelajahi Mataram', en: 'Discover Mataram' }}
+          title={{ id: 'Menyusuri Jejaknya', en: 'Tracing Its Footsteps' }}
+        />
         <CardGrid min="230px">
           {discoverCards.map((card, i) => (
-            <Card key={card.title} delay={i * 0.06} tall {...card} />
+            <Card key={card.title.en} delay={i * 0.06} tall title={card.title} body={card.body} />
           ))}
         </CardGrid>
       </Wrap>
@@ -441,6 +514,7 @@ function CardGrid({ min = '260px', children }) {
 }
 
 function Card({ title, body, delay = 0, tall = false }) {
+  const { t } = useLanguage();
   return (
     <article
       data-reveal=""
@@ -450,8 +524,8 @@ function Card({ title, body, delay = 0, tall = false }) {
         tall && 'flex min-h-[260px] flex-col justify-end',
       )}
     >
-      <h3 className="mb-2.5 font-display text-[1.4rem] font-medium text-forest">{title}</h3>
-      <p className="text-[0.92rem] leading-[1.8] text-ink-soft">{body}</p>
+      <h3 className="mb-2.5 font-display text-[1.4rem] font-medium text-forest">{t(title)}</h3>
+      <p className="text-[0.92rem] leading-[1.8] text-ink-soft">{t(body)}</p>
     </article>
   );
 }
@@ -465,10 +539,12 @@ function Card({ title, body, delay = 0, tall = false }) {
   sudah ada dan membuat bandnya belang di satu section saja.
 */
 function ArchivePreview() {
+  const { t } = useLanguage();
+
   return (
     <Section id="archive">
       <Wrap>
-        <SectionHead kicker="Royal Archive" title="Arsip Kerajaan" />
+        <SectionHead kicker={{ id: 'Arsip Kerajaan', en: 'Royal Archive' }} title={{ id: 'Arsip Kerajaan', en: 'Royal Archive' }} />
 
         {/* Kotak cari hiasan; pencarian sungguhannya ada di /archive. */}
         <form
@@ -479,18 +555,18 @@ function ArchivePreview() {
           className="mb-8 flex items-center gap-2 rounded-lg border border-forest/20 bg-paper py-1.5 pr-1.5 pl-5"
         >
           <label className="sr-only" htmlFor="archive-q">
-            Cari koleksi
+            {t({ id: 'Cari koleksi', en: 'Search the collection' })}
           </label>
           <input
             id="archive-q"
             type="search"
-            placeholder="Cari koleksi…"
+            placeholder={t({ id: 'Cari koleksi…', en: 'Search the collection…' })}
             autoComplete="off"
             className="flex-1 border-none bg-transparent py-2.5 text-[0.92rem] outline-none placeholder:text-sage"
           />
           <button
             type="submit"
-            aria-label="Cari arsip"
+            aria-label={t({ id: 'Cari arsip', en: 'Search the archive' })}
             className="grid h-10 w-10 cursor-pointer place-items-center rounded-lg bg-forest text-paper transition-colors duration-[400ms] ease-heritage hover:bg-gold"
           >
             <SearchIcon size={17} />
@@ -500,7 +576,7 @@ function ArchivePreview() {
         <CardGrid>
           {archivePreview.map((item, i) => (
             <article
-              key={item.title}
+              key={item.glyph}
               data-reveal=""
               data-reveal-delay={(i * 0.06).toFixed(2)}
               className="bg-paper/90 p-4 transition-colors duration-500 ease-heritage hover:bg-paper"
@@ -516,8 +592,8 @@ function ArchivePreview() {
               >
                 <span>{item.glyph}</span>
               </div>
-              <h3 className="mb-1 font-display text-[1.16rem] font-medium text-forest">{item.title}</h3>
-              <p className="text-[0.78rem] text-ink-soft">{item.meta}</p>
+              <h3 className="mb-1 font-display text-[1.16rem] font-medium text-forest">{t(item.title)}</h3>
+              <p className="text-[0.78rem] text-ink-soft">{t(item.meta)}</p>
             </article>
           ))}
         </CardGrid>
@@ -529,26 +605,28 @@ function ArchivePreview() {
 /* ── news ────────────────────────────────────────────────────────────────── */
 
 function News() {
+  const { t } = useLanguage();
+
   return (
     <Section id="news">
       <Wrap>
-        <SectionHead kicker="News & Events" title="Kabar dari Keraton" />
+        <SectionHead kicker={{ id: 'Berita & Acara', en: 'News & Events' }} title={{ id: 'Kabar dari Keraton', en: 'News from the Court' }} />
 
         <ul className="list-none border-t border-forest/16">
           {news.map((item, i) => (
             <li
-              key={item.title}
+              key={item.title.en}
               data-reveal=""
               data-reveal-delay={(i * 0.05).toFixed(2)}
               className="grid grid-cols-1 items-baseline gap-2 border-b border-forest/12 py-8 transition-[padding-left] duration-500 ease-heritage hover:pl-3.5 min-[761px]:grid-cols-[110px_1fr_auto] min-[761px]:gap-8"
             >
               <span className="text-[0.66rem] font-medium tracking-[0.18em] uppercase text-gold-deep">
-                {item.tag}
+                {t(item.tag)}
               </span>
               <h3 className="font-display text-[clamp(1.18rem,2.2vw,1.55rem)] font-normal text-forest">
-                {item.title}
+                {t(item.title)}
               </h3>
-              <span className="text-[0.8rem] whitespace-nowrap text-ink-soft">{item.date}</span>
+              <span className="text-[0.8rem] whitespace-nowrap text-ink-soft">{t(item.date)}</span>
             </li>
           ))}
         </ul>

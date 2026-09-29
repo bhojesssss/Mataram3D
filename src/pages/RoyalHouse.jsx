@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { cx } from '@/lib/cx';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { useLanguage } from '@/i18n/LanguageContext';
 import { generations } from '@/data/genealogy';
 import { Wrap } from '@/components/ui/Wrap';
 import { Frame } from '@/components/ui/Frame';
@@ -13,9 +14,14 @@ const HAS_DIALOG =
   typeof HTMLDialogElement !== 'undefined' && typeof HTMLDialogElement.prototype.showModal === 'function';
 
 export default function RoyalHouse() {
+  const { t } = useLanguage();
+
   usePageMeta(
-    'Royal House — Mataram',
-    'Nine generations from the forest of Mentaok to the courts of Surakarta and Yogyakarta — the genealogy of the House of Mataram.',
+    t({ id: 'Wangsa Mataram — Mataram', en: 'Royal House — Mataram' }),
+    t({
+      id: 'Sembilan generasi dari hutan Mentaok hingga istana Surakarta dan Yogyakarta — silsilah Wangsa Mataram.',
+      en: 'Nine generations from the forest of Mentaok to the courts of Surakarta and Yogyakarta — the genealogy of the House of Mataram.',
+    }),
   );
 
   const [member, setMember] = useState(null);
@@ -24,12 +30,12 @@ export default function RoyalHouse() {
     <>
       <Header />
 
-      <PSection aria-label="Silsilah kerajaan">
+      <PSection aria-label={t({ id: 'Silsilah kerajaan', en: 'Royal genealogy' })}>
         <Wrap>
           <div className="mx-auto max-w-[940px]">
             <p className="mb-[clamp(28px,3.4vw,48px)] flex items-center gap-4 after:h-px after:flex-1 after:bg-forest/20 after:content-['']">
               <span className="text-[0.64rem] tracking-[0.3em] whitespace-nowrap uppercase text-gold-deep">
-                Royal Genealogy
+                {t({ id: 'Silsilah Kerajaan', en: 'Royal Genealogy' })}
               </span>
             </p>
 
@@ -40,16 +46,18 @@ export default function RoyalHouse() {
         </Wrap>
       </PSection>
 
-      <PSection tone="forest" aria-label="Pesan raja">
+      <PSection tone="forest" aria-label={t({ id: 'Pesan raja', en: "The king's message" })}>
         <Wrap>
           <Reveal as="blockquote" className="mx-auto max-w-[820px] text-center">
-            <Eyebrow tone="dark">Royal Message</Eyebrow>
+            <Eyebrow tone="dark">{t({ id: 'Pesan Kerajaan', en: 'Royal Message' })}</Eyebrow>
             <p className="mb-7 font-display text-[clamp(1.4rem,3vw,2.75rem)] font-light italic leading-[1.45] text-paper text-pretty">
-              &ldquo;A crown is not worn for the one who wears it. It is held in trust for those who
-              will remember how it was carried.&rdquo;
+              {t({
+                id: '“Mahkota bukan dikenakan untuk yang memakainya. Ia dititipkan bagi mereka yang akan mengingat bagaimana ia dijunjung.”',
+                en: '“A crown is not worn for the one who wears it. It is held in trust for those who will remember how it was carried.”',
+              })}
             </p>
             <footer className="flex items-center justify-center gap-3.5 text-[0.66rem] tracking-[0.26em] uppercase text-cream before:h-px before:w-9 before:bg-gold/50 before:content-[''] after:h-px after:w-9 after:bg-gold/50 after:content-['']">
-              The Royal House of Mataram
+              {t({ id: 'Wangsa Kerajaan Mataram', en: 'The Royal House of Mataram' })}
             </footer>
           </Reveal>
         </Wrap>
@@ -63,6 +71,7 @@ export default function RoyalHouse() {
 /* ── kepala halaman ──────────────────────────────────────────────────────── */
 
 function Header() {
+  const { t } = useLanguage();
   const [artFailed, setArtFailed] = useState(false);
 
   return (
@@ -82,15 +91,30 @@ function Header() {
       )}
 
       <Wrap className="relative">
-        <Eyebrow>The Royal House</Eyebrow>
+        <Eyebrow>{t({ id: 'Wangsa Kerajaan', en: 'The Royal House' })}</Eyebrow>
         <PageTitle className="mb-[22px]">
-          The <em>Sovereign</em>
-          <br />
-          and the Line
+          {t({
+            id: (
+              <>
+                Sang <em>Penguasa</em>
+                <br />
+                dan Trahnya
+              </>
+            ),
+            en: (
+              <>
+                The <em>Sovereign</em>
+                <br />
+                and the Line
+              </>
+            ),
+          })}
         </PageTitle>
         <PageLede>
-          Nine generations from the forest of Mentaok to the courts of today. Select any name to read
-          the profile.
+          {t({
+            id: 'Sembilan generasi dari hutan Mentaok hingga istana masa kini. Pilih nama mana pun untuk membaca profilnya.',
+            en: 'Nine generations from the forest of Mentaok to the courts of today. Select any name to read the profile.',
+          })}
         </PageLede>
       </Wrap>
     </div>
@@ -106,6 +130,7 @@ function Header() {
  * mendapat palang horizontal tempat garisnya membelah jadi dua keraton.
  */
 function Generation({ first, nodes, onOpen }) {
+  const { t } = useLanguage();
   const split = nodes.length > 1;
 
   return (
@@ -126,7 +151,7 @@ function Generation({ first, nodes, onOpen }) {
             <span className="mb-[7px] block font-display text-[clamp(1.1rem,1.8vw,1.55rem)] leading-[1.2] text-forest">
               {node.name}
             </span>
-            <span className="block text-[0.62rem] tracking-[0.2em] uppercase text-gold-deep">{node.reign}</span>
+            <span className="block text-[0.62rem] tracking-[0.2em] uppercase text-gold-deep">{t(node.reign)}</span>
             {node.court && (
               <span className="mt-[11px] block text-[0.56rem] tracking-[0.2em] uppercase text-ink/72">
                 {node.court}
@@ -134,7 +159,7 @@ function Generation({ first, nodes, onOpen }) {
             )}
             {/* Selalu ada untuk pembaca layar; ikut terlihat kalau <dialog> tak didukung. */}
             <span className={cx('mt-[11px] block text-[0.74rem] leading-[1.65] text-ink/72', HAS_DIALOG && 'sr-only')}>
-              {node.role}
+              {t(node.role)}
             </span>
           </button>
         ))}
@@ -146,6 +171,7 @@ function Generation({ first, nodes, onOpen }) {
 /* ── lembar profil ───────────────────────────────────────────────────────── */
 
 function MemberSheet({ member, onClose }) {
+  const { t } = useLanguage();
   const dialogRef = useRef(null);
 
   useEffect(() => {
@@ -170,7 +196,7 @@ function MemberSheet({ member, onClose }) {
       <div className="grid grid-cols-1 min-[761px]:grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
         <Frame
           src="/img/royal-portrait.png"
-          label="Portrait"
+          label={t({ id: 'Potret', en: 'Portrait' })}
           rounded={false}
           className="min-h-[clamp(200px,24vw,340px)] border-0"
         />
@@ -179,18 +205,18 @@ function MemberSheet({ member, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            aria-label="Tutup profil"
+            aria-label={t({ id: 'Tutup profil', en: 'Close profile' })}
             className="absolute top-4 right-4 z-[2] grid h-[38px] w-[38px] cursor-pointer place-items-center rounded-lg border border-forest/32 bg-paper/80 text-forest transition-colors duration-[350ms] ease-heritage hover:bg-forest/12"
           >
             &#10005;
           </button>
 
-          <p className="mb-3.5 text-[0.64rem] tracking-[0.28em] uppercase text-gold-deep">{member?.reign}</p>
+          <p className="mb-3.5 text-[0.64rem] tracking-[0.28em] uppercase text-gold-deep">{t(member?.reign)}</p>
           <h2 id="member-name" className="mb-[18px] font-display text-[clamp(1.6rem,2.8vw,2.5rem)] font-light leading-[1.15] text-forest">
             {member?.name}
           </h2>
-          <p className="mb-[26px] text-[0.88rem] leading-[1.9] text-ink/88 text-pretty">{member?.role}</p>
-          <Dlink to="/archive">Open in archive</Dlink>
+          <p className="mb-[26px] text-[0.88rem] leading-[1.9] text-ink/88 text-pretty">{t(member?.role)}</p>
+          <Dlink to="/archive">{t({ id: 'Buka di arsip', en: 'Open in archive' })}</Dlink>
         </div>
       </div>
     </dialog>
