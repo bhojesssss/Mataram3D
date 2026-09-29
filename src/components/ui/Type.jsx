@@ -123,7 +123,25 @@ export function ButtonOutline({ to, tone = 'light', children, className, ...rest
   );
 }
 
-/** CTA emas di hero. */
+/*
+  Panah ButtonGold. Keduanya absolut dan cuma `left`/`right`-nya yang
+  bergerak; easing-nya sengaja melewati target sedikit (1.56) supaya panah
+  terasa "mendarat", bukan berhenti.
+*/
+const FLOW_ARROW =
+  'absolute top-1/2 -translate-y-1/2 transition-[left,right] duration-[800ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none';
+
+/**
+ * CTA emas di hero.
+ *
+ * Hover-nya "flow": panah kanan meluncur keluar, kembarannya masuk dari kiri,
+ * dan label bergeser mengikutinya. Hanya label dan panah yang bergerak — isian
+ * emas dan sudut rounded-lg tetap, jadi tombolnya tidak pernah kosong.
+ *
+ * Saat diam susunannya sama dengan versi sebelumnya (34px · label · 13px ·
+ * panah · 34px): padding 48px dikurangi geser label 14px. Saat hover
+ * cerminannya.
+ */
 export function ButtonGold({ href, children, className, ...rest }) {
   return (
     <a
@@ -135,17 +153,20 @@ export function ButtonGold({ href, children, className, ...rest }) {
           bisa dipertahankan. Emasnya sendiri tetap, jadi tombolnya masih terbaca
           sebagai tombol yang sama; yang berubah hanya warna hurufnya (5.99:1).
         */
-        'inline-flex items-center gap-3 rounded-lg border border-transparent bg-gold px-[34px] py-[15px] text-[0.76rem] font-medium tracking-[0.2em] uppercase text-forest-deep no-underline',
-        'transition-[background-color,color,gap,border-color] duration-[450ms] ease-heritage',
-        // Sama seperti LinkMore: saat isian emasnya dilepas, warna teksnya harus
-        // turun ke gold-deep, kalau tidak tombolnya kosong saat di-hover.
-        'hover:gap-5 hover:border-gold hover:bg-transparent hover:text-gold-deep',
+        'group relative inline-flex items-center overflow-hidden rounded-lg bg-gold px-12 py-[15px] text-[0.76rem] font-medium tracking-[0.2em] uppercase text-forest-deep no-underline',
         className,
       )}
       {...rest}
     >
-      {children}
-      <ArrowRight />
+      <ArrowRight
+        className={cx(FLOW_ARROW, '-left-1/4 group-hover:left-[34px] group-focus-visible:left-[34px]')}
+      />
+      <span className="-translate-x-3.5 transition-transform duration-[800ms] ease-out group-hover:translate-x-3.5 group-focus-visible:translate-x-3.5 motion-reduce:transition-none">
+        {children}
+      </span>
+      <ArrowRight
+        className={cx(FLOW_ARROW, 'right-[34px] group-hover:-right-1/4 group-focus-visible:-right-1/4')}
+      />
     </a>
   );
 }

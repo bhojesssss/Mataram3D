@@ -62,6 +62,15 @@ const SQRT2 = Math.SQRT2;
 const ROOF_CURVE = 1.75;
 
 /**
+ * Separations that keep overlapping timber from z-fighting. At the ceiling's
+ * ~10 units from a 0.1 near plane the depth buffer resolves well under a
+ * millimetre, so these only need to break exact coplanarity — 6mm and 15mm are
+ * invisible at that distance and still hundreds of depth steps apart.
+ */
+const BEAM_LAP = 0.012; // cross beams are this much shallower than the long pair
+const BEAD_DROP = 0.015; // gilt bead hangs this far proud of its beam
+
+/**
  * CylinderGeometry with 4 radial segments gives a square frustum, but its `radius`
  * is the circumradius. Callers think in half-widths, so convert here and rotate 45°
  * so the flat faces square up with the world axes.
@@ -445,16 +454,27 @@ export class Pendopo extends THREE.Group {
       // Overrun the span so beams lap at the corners rather than leaving a notch.
       const len = r.span * 2 + r.w * 2;
       const beamGeo = this._track(new THREE.BoxGeometry(len, r.h, r.w));
+      // The cross pair is a hair shallower. At full height its top and bottom faces
+      // would be exactly coplanar with the long pair's inside each corner lap, and
+      // with the timber grain running 90° apart the two z-fight into a shimmer the
+      // camera's idle breath never lets settle. Tucked BEAM_LAP/2 inside, the long
+      // beam simply wins the lap.
+      const crossGeo = this._track(new THREE.BoxGeometry(len, r.h - BEAM_LAP, r.w));
       // Thin gilt bead along the lower edge — catches light and reads the run of
-      // the beam even where it sits in the roof's shadow.
-      const beadGeo = this._track(new THREE.BoxGeometry(len, 0.09, r.w + 0.07));
+      // the beam even where it sits in the roof's shadow. It hangs BEAD_DROP proud
+      // of the beam's underside and overruns its ends: flush, the bead's bottom
+      // face was coplanar with the beam's along the whole run, gold and timber
+      // fighting across exactly the face the ceiling shot looks up at.
+      const beadGeo = this._track(
+        new THREE.BoxGeometry(len + BEAD_DROP * 2, 0.09, r.w + 0.07),
+      );
 
       for (let s = 0; s < 4; s++) {
         const rot = (Math.PI / 2) * s;
         const px = s === 1 ? r.span : s === 3 ? -r.span : 0;
         const pz = s === 0 ? r.span : s === 2 ? -r.span : 0;
 
-        const beam = new THREE.Mesh(beamGeo, timber);
+        const beam = new THREE.Mesh(s % 2 === 0 ? beamGeo : crossGeo, timber);
         beam.rotation.y = rot;
         beam.position.set(px, r.y - r.h / 2, pz);
         beam.castShadow = true;
@@ -463,7 +483,7 @@ export class Pendopo extends THREE.Group {
 
         const bead = new THREE.Mesh(beadGeo, gold);
         bead.rotation.y = rot;
-        bead.position.set(px, r.y - r.h + 0.045, pz);
+        bead.position.set(px, r.y - r.h + 0.045 - BEAD_DROP, pz);
         g.add(bead);
       }
     }
@@ -627,11 +647,17 @@ export class Pendopo extends THREE.Group {
       const half = baseHalf + (topHalf - baseHalf) * t;
       const y = y0 + total * t;
 
-      // Open frame of four beams.
+      // Open frame of four beams. The cross pair is shallower by BEAM_LAP for the
+      // same reason as the blandar in _buildBeams: at equal depth the corner laps
+      // are coplanar top and bottom, and this is the face the camera looks up at.
       const frame = new THREE.Group();
       const beamGeo = this._track(new THREE.BoxGeometry(half * 2 + 0.7, 0.34, 0.42));
+      const crossGeo = this._track(
+        new THREE.BoxGeometry(half * 2 + 0.7, 0.34 - BEAM_LAP, 0.42),
+      );
+      const mat = i % 2 === 0 ? timber : gold;
       for (let s = 0; s < 4; s++) {
-        const beam = new THREE.Mesh(beamGeo, i % 2 === 0 ? timber : gold);
+        const beam = new THREE.Mesh(s % 2 === 0 ? beamGeo : crossGeo, mat);
         beam.rotation.y = (Math.PI / 2) * s;
         const d = half;
         beam.position.set(

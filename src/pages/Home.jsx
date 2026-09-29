@@ -43,10 +43,6 @@ export default function Home() {
 
   usePageMeta(
     t({ id: 'Mataram — Warisan Luhur Kerajaan', en: 'Mataram — The Royal Heritage' }),
-    t({
-      id: 'Sebuah warisan luhur yang hidup dalam sejarah, budaya, dan nilai-nilai Jawa. Digital heritage experience Istana Mataram.',
-      en: 'A noble heritage that lives on in history, culture, and Javanese values. A digital heritage experience of the Mataram Palace.',
-    }),
   );
 
   /*
@@ -181,16 +177,16 @@ function Hero() {
           <Rule />
         </div>
 
-        <Surface
+        {/* <Surface
           as="p"
           data-reveal=""
           data-reveal-delay="0.22"
           className="mx-auto mb-16 max-w-[40ch] text-[clamp(0.95rem,1.5vw,1.08rem)] leading-[1.9] text-ink"
         >
-          {t({ id: 'Sebuah warisan luhur yang hidup', en: 'A noble heritage that lives on' })}
+
           <br />
           {t({ id: 'dalam sejarah, budaya, dan nilai-nilai Jawa.', en: 'in history, culture, and Javanese values.' })}
-        </Surface>
+        </Surface> */}
 
         <ButtonGold href="#intro" data-reveal="" data-reveal-delay="0.3">
           {t({ id: 'JELAJAHI', en: 'EXPLORE' })}
@@ -328,8 +324,15 @@ function HistoryPreview() {
 
 /* ── royal house ─────────────────────────────────────────────────────────── */
 
-const GENEALOGY_BOX = 'rounded-lg border border-forest/20 bg-paper px-[30px] py-4 text-center';
-const GENEALOGY_NAME = 'text-[0.76rem] font-medium tracking-[0.16em] leading-[1.6] text-forest';
+/*
+  Varian max-[520px] ada karena dua kotak cabang harus tetap berdampingan
+  (garisnya tidak bisa menyambung bagan yang terlipat): di 320px tiap kolom
+  cuma ~108px, dan nama terpanjang (YOGYAKARTA) di ukuran desktop saja
+  sudah ~102px sebelum padding.
+*/
+const GENEALOGY_BOX = 'rounded-lg border border-forest/20 bg-paper px-[30px] py-4 text-center max-[520px]:px-3';
+const GENEALOGY_NAME =
+  'text-[0.76rem] font-medium tracking-[0.16em] leading-[1.6] text-forest max-[520px]:text-[0.66rem] max-[520px]:tracking-[0.1em]';
 
 function RoyalHousePreview() {
   const { t } = useLanguage();
@@ -352,28 +355,51 @@ function RoyalHousePreview() {
         */}
         <div
           data-reveal=""
-          className="mb-16 flex flex-col items-center rounded-lg border border-gold/28 bg-paper/55 px-8 py-16"
+          className="mb-16 flex flex-col items-center rounded-lg border border-gold/28 bg-paper/55 px-8 py-16 max-[520px]:px-3"
         >
           <div className={GENEALOGY_BOX}>
             <p className={GENEALOGY_NAME}>SULTAN AGUNG</p>
             <p className="mt-1.5 text-[0.72rem] text-gold-deep">1613 &ndash; 1645</p>
           </div>
 
-          <div aria-hidden="true" className="h-10 w-px bg-forest/28" />
+          {/* Batang dari Sultan Agung — berhenti tepat di palang, tidak menembusnya. */}
+          <div aria-hidden="true" className="h-5 w-px bg-forest/28" />
 
-          <div className="relative flex flex-wrap justify-center gap-[clamp(20px,6vw,90px)] before:absolute before:-top-5 before:right-1/4 before:left-1/4 before:h-px before:bg-forest/28 before:content-['']">
+          {/*
+            Palangnya dirakit per anak, bukan satu garis selebar baris. Palang
+            lama diukur dari lebar baris (left/right 1/4) dan tidak tahu di mana
+            kotak anaknya berdiri, jadi ujungnya meleset dari batang turunnya.
+            Sekarang tiap <li> menggambar separuh kiri (::before) dan separuh
+            kanan (::after) di tepi atasnya; anak pertama membuang separuh
+            kirinya dan anak terakhir separuh kanannya, sehingga palangnya
+            berujung persis di tengah kotak pertama dan terakhir, berapa pun
+            lebarnya. Kolomnya sama lebar (auto-cols-fr) supaya batang Sultan
+            Agung jatuh tepat di tengah palang.
+            Tidak lagi flex-wrap: bagan yang pecah ke dua baris tidak bisa
+            disambung garis, jadi di layar sempit ukurannya yang mengecil
+            (lihat GENEALOGY_BOX).
+          */}
+          <ul className="grid list-none auto-cols-fr grid-flow-col">
             {['KASUNANAN\nSURAKARTA', 'KESULTANAN\nYOGYAKARTA'].map((court) => (
-              <div
+              <li
                 key={court}
                 className={cx(
-                  GENEALOGY_BOX,
-                  "relative before:absolute before:-top-5 before:left-1/2 before:h-5 before:w-px before:bg-forest/28 before:content-['']",
+                  'relative flex justify-center px-[clamp(6px,3vw,45px)] pt-5',
+                  "before:absolute before:top-0 before:left-0 before:h-px before:w-1/2 before:bg-forest/28 before:content-[''] first:before:hidden",
+                  "after:absolute after:top-0 after:right-0 after:h-px after:w-1/2 after:bg-forest/28 after:content-[''] last:after:hidden",
                 )}
               >
-                <p className={cx(GENEALOGY_NAME, 'whitespace-pre-line')}>{court}</p>
-              </div>
+                <div
+                  className={cx(
+                    GENEALOGY_BOX,
+                    "relative before:absolute before:-top-5 before:left-1/2 before:h-5 before:w-px before:bg-forest/28 before:content-['']",
+                  )}
+                >
+                  <p className={cx(GENEALOGY_NAME, 'whitespace-pre-line')}>{court}</p>
+                </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
 
         <CardGrid>

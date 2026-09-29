@@ -349,6 +349,129 @@
   }
 }
 
+/*
+  ── LOADER ASAP ───────────────────────────────────────────────────────────
+
+  Tirai pembuka homepage (components/home/Loader.jsx). Semua geraknya di
+  sini supaya komponennya cukup menukar satu class `is-leaving`.
+
+  Urutan waktunya — ubah satu angka, periksa yang lain:
+    0.00s  gumpalan tepi mulai bergulung masuk (1.1s); yang di tengah
+           menyusul, paling lambat 0.28s
+    0.80s  logo muncul (0.55s) — mulai saat asap sudah hampir rapat
+    ...    tertahan sampai scene siap; asap terus bergolak
+    exit   logo hilang (0.32s)
+           kabut dasar memudar mulai 0.15s (0.5s)
+           gumpalan tersibak mulai 0.22s, tengah lebih dulu, yang paling
+           luar menyusul 0.3s kemudian (1.2s) — total ±1.7s, jauh di bawah
+           jaring pengaman 3s di Loader.jsx
+
+  Per gumpalan, dari Loader.jsx: --away (arah dan jarak pergi), --in / --out
+  (jeda masuk dan keluar), --drift (arah golakan).
+*/
+@layer components {
+  /* Asap bagian dalam: lebih gelap dari gumpalan, dan makin gelap ke tepi. */
+  .loader-haze {
+    background: radial-gradient(ellipse at 50% 45%, #cfc8bb, #a89e8e);
+  }
+  .loader-haze.is-leaving {
+    animation: loader-haze-out 0.5s ease-out 0.15s both;
+  }
+
+  .smoke-puff {
+    position: absolute;
+    translate: -50% -50%;
+    animation: loader-smoke-in 1.1s cubic-bezier(0.16, 1, 0.3, 1) var(--in) both;
+  }
+  .smoke.is-leaving .smoke-puff {
+    animation: loader-smoke-out 1.2s cubic-bezier(0.55, 0, 0.35, 1) calc(0.22s + var(--out)) both;
+  }
+
+  /*
+    Badan gumpalan, dua lapis:
+      1. teduh di perut bawah
+      2. badan yang terang di atas pusat dan menipis ke tepi, tanpa garis luar
+    Pusat badannya digeser sedikit ke atas, jadi puncaknya yang paling terang
+    dan tidak perlu lapis sorot sendiri — sorot terpisah (percobaan pertama)
+    terbaca sebagai kilap oval, dan asapnya jadi mirip jok kulit.
+
+    Tepinya sengaja memudar ke warna terang, bukan menggelap: kalau tepinya
+    gelap, begitu kabut dasar hilang saat tirai dibuka tiap gumpalan terbaca
+    sebagai bola. Gelapnya kedalaman asap datang dari kabut dasar di celahnya.
+  */
+  .smoke-billow {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(42% 20% at 52% 78%, rgb(132 122 104 / 0.3), rgb(132 122 104 / 0)),
+      radial-gradient(
+        47% 47% at 50% 45%,
+        #faf9f5 0%,
+        #eeeae2 36%,
+        rgb(226 220 209 / 0.95) 58%,
+        rgb(216 209 197 / 0.55) 78%,
+        rgb(216 209 197 / 0) 95%
+      );
+    animation: smoke-billow 7s ease-in-out infinite;
+  }
+
+  .loader-logo {
+    animation: loader-logo-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) 0.8s both;
+  }
+  .loader-logo.is-leaving {
+    animation: loader-logo-out 0.32s cubic-bezier(0.55, 0, 1, 0.45) both;
+  }
+}
+
+@keyframes loader-haze-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Asap berkumpul: datang dari luar dalam keadaan tipis dan mengembang, lalu memadat. */
+@keyframes loader-smoke-in {
+  from {
+    opacity: 0;
+    transform: var(--away) scale(1.4);
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Kebalikannya: bergeser keluar sambil mengembang, lalu buyar di paruh akhir. */
+@keyframes loader-smoke-out {
+  45% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: var(--away) scale(1.4);
+  }
+}
+
+@keyframes smoke-billow {
+  50% {
+    transform: var(--drift) scale(1.1);
+  }
+}
+
+@keyframes loader-logo-in {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+
+@keyframes loader-logo-out {
+  to {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
 /* <dialog> backdrop tidak bisa disentuh utility class. */
 @layer components {
   dialog::backdrop {
