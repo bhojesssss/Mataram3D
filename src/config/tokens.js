@@ -72,7 +72,16 @@ export const beatSections = {
   approach: 'intro',
   threshold: 'history',
   interior: 'palace',
-  ascend: 'culture',
+  // Anchored to a marker at the Palace/Band boundary (Home.jsx), not to the
+  // Culture section itself. `ascend` points the camera straight up into the
+  // tumpang sari — the brightest, busiest frame in the whole scene — and
+  // centering it on Culture used to land that frame directly behind the
+  // section's heading. The Band plate's alpha is tuned against a dark-roof
+  // worst case, not a lit gold ceiling, so it wasn't opaque enough to hide it:
+  // the heading rendered with a ghosted diamond pattern behind it. Anchoring
+  // earlier means the peak has already passed — camera moving on toward
+  // `compound` — by the time the heading scrolls into view.
+  ascend: 'ascend-reveal',
   compound: 'discover',
   horizon: 'archive',
   end: 'news',

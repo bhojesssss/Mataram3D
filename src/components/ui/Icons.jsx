@@ -15,9 +15,9 @@ export function Rosette({ size = 22, strokeWidth = 1.4, className }) {
   );
 }
 
-export function ArrowRight({ size = 15 }) {
+export function ArrowRight({ size = 15, className }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
       <path d="M5 12h13M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );

@@ -4,7 +4,7 @@ import { ScrollController } from '@/scroll/ScrollController';
 import { hydrateAssets } from '@/config/assets.manifest';
 
 /**
- * Pendopo 3D di belakang homepage, plus scrim krem di atasnya.
+ * Pendopo 3D di belakang homepage.
  *
  * Kode Three.js-nya tidak berubah sedikit pun dari versi vanilla — komponen
  * ini hanya mengurus daur hidupnya: dibuat saat homepage terpasang, dibuang
@@ -79,18 +79,15 @@ export default function Scene3D({ onReady }) {
 
   if (failed) return null;
 
+  /*
+    Cuma canvas. Dulu ada #scrim di sini — satu div fixed sepenuh layar yang
+    opacity-nya digerakkan scroll — dan itu yang menanggung keterbacaan
+    halaman. Tugas itu sekarang dipegang <Band> di dalam halaman, yang menutupi
+    render hanya di sepanjang rentang baca; lihat components/ui/Band.jsx.
+  */
   return (
-    <>
-      {/* Pendopo 3D. Fixed di belakang segalanya; seluruh isi halaman menggulir di atasnya. */}
-      <canvas ref={canvasRef} id="scene" aria-hidden="true" className="fixed inset-0 z-0 block h-full w-full" />
-
-      {/*
-        Cuci krem yang memudar masuk di atas canvas untuk section padat teks,
-        supaya badan teks selalu punya kontras. Opacity-nya digerakkan
-        ScrollController, bukan nilai tetap.
-      */}
-      <div id="scrim" aria-hidden="true" className="pointer-events-none fixed inset-0 z-[1] bg-cream opacity-0 will-change-[opacity]" />
-    </>
+    /* Pendopo 3D. Fixed di belakang segalanya; seluruh isi halaman menggulir di atasnya. */
+    <canvas ref={canvasRef} id="scene" aria-hidden="true" className="fixed inset-0 z-0 block h-full w-full" />
   );
 }
 

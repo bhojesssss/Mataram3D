@@ -17,7 +17,9 @@ export function Eyebrow({ children, tone = 'light', className, as: Tag = 'p', ..
     <Tag
       className={cx(
         'mb-5 text-[0.64rem] font-medium tracking-[0.34em] uppercase',
-        tone === 'dark' ? 'text-gold' : 'text-gold-deep',
+        // Di panel hijau, emas murni cuma 4.27:1 — tan yang dipakai (6.18:1), dan
+        // itu memang perannya di palet: trim dan teks di atas latar gelap.
+        tone === 'dark' ? 'text-tan' : 'text-gold-deep',
         className,
       )}
       {...rest}
@@ -27,21 +29,32 @@ export function Eyebrow({ children, tone = 'light', className, as: Tag = 'p', ..
   );
 }
 
-/** Versi homepage: emas terang dengan halo krem, karena duduk di atas render 3D. */
+/**
+ * Versi homepage dari Eyebrow.
+ *
+ * Dulu `text-gold` + halo. Emas murni di atas latar terang cuma 1.93:1 — pada
+ * 0.72rem huruf kapital berjarak lebar, itu praktis tidak terbaca, dan halo
+ * tidak menolong karena text-shadow menambah glow di luar huruf, bukan kontras
+ * di dalamnya. Sekarang `gold-deep` (5.00:1 di kasus terburuk) dan kontrasnya
+ * datang dari surface yang menampungnya.
+ */
 export function Kicker({ children, className, ...rest }) {
   return (
-    <p className={cx('halo mb-4 text-[0.72rem] font-medium tracking-[0.26em] uppercase text-gold', className)} {...rest}>
+    <p
+      className={cx('mb-4 text-[0.72rem] font-medium tracking-[0.26em] uppercase text-gold-deep', className)}
+      {...rest}
+    >
       {children}
     </p>
   );
 }
 
-/** Judul section homepage. */
+/** Judul section homepage. Kontrasnya dari surface induknya, bukan dari halo. */
 export function SectionTitle({ children, className, ...rest }) {
   return (
     <h2
       className={cx(
-        'halo mb-8 font-display text-[clamp(2.1rem,4.4vw,3.4rem)] font-normal leading-[1.12] tracking-[0.005em] text-forest',
+        'mb-8 font-display text-[clamp(2.1rem,4.4vw,3.4rem)] font-normal leading-[1.12] tracking-[0.005em] text-forest',
         className,
       )}
       {...rest}
@@ -55,7 +68,9 @@ export function SectionTitle({ children, className, ...rest }) {
 export function LinkMore({ to, href, children, className, ...rest }) {
   const classes = cx(
     'inline-flex items-center gap-2 text-[0.78rem] font-medium tracking-[0.1em] uppercase no-underline',
-    'text-forest transition-[gap,color] duration-[400ms] ease-heritage hover:gap-[15px] hover:text-gold',
+    // hover:text-gold dulu di sini. Warna hover tetap harus terbaca — emas murni
+    // di atas surface cuma 1.55:1, jadi tautan justru menghilang saat disentuh.
+    'text-forest transition-[gap,color] duration-[400ms] ease-heritage hover:gap-[15px] hover:text-gold-deep',
     className,
   );
   const inner = (
@@ -108,21 +123,50 @@ export function ButtonOutline({ to, tone = 'light', children, className, ...rest
   );
 }
 
-/** CTA emas di hero. */
+/*
+  Panah ButtonGold. Keduanya absolut dan cuma `left`/`right`-nya yang
+  bergerak; easing-nya sengaja melewati target sedikit (1.56) supaya panah
+  terasa "mendarat", bukan berhenti.
+*/
+const FLOW_ARROW =
+  'absolute top-1/2 -translate-y-1/2 transition-[left,right] duration-[800ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none';
+
+/**
+ * CTA emas di hero.
+ *
+ * Hover-nya "flow": panah kanan meluncur keluar, kembarannya masuk dari kiri,
+ * dan label bergeser mengikutinya. Hanya label dan panah yang bergerak — isian
+ * emas dan sudut rounded-lg tetap, jadi tombolnya tidak pernah kosong.
+ *
+ * Saat diam susunannya sama dengan versi sebelumnya (34px · label · 13px ·
+ * panah · 34px): padding 48px dikurangi geser label 14px. Saat hover
+ * cerminannya.
+ */
 export function ButtonGold({ href, children, className, ...rest }) {
   return (
     <a
       href={href}
       className={cx(
-        'inline-flex items-center gap-3 rounded-lg border border-transparent bg-gold px-[34px] py-[15px] text-[0.76rem] font-medium tracking-[0.2em] uppercase text-paper no-underline',
-        'transition-[background-color,color,gap,border-color] duration-[450ms] ease-heritage',
-        'hover:gap-5 hover:border-gold hover:bg-transparent hover:text-gold',
+        /*
+          Teks hijau tua di atas emas, bukan krem. Moodboard menggambarnya krem,
+          tapi krem di atas #C9A34E cuma 2.16:1 — pada CTA utama hero itu tidak
+          bisa dipertahankan. Emasnya sendiri tetap, jadi tombolnya masih terbaca
+          sebagai tombol yang sama; yang berubah hanya warna hurufnya (5.99:1).
+        */
+        'group relative inline-flex items-center overflow-hidden rounded-lg bg-gold px-12 py-[15px] text-[0.76rem] font-medium tracking-[0.2em] uppercase text-forest-deep no-underline',
         className,
       )}
       {...rest}
     >
-      {children}
-      <ArrowRight />
+      <ArrowRight
+        className={cx(FLOW_ARROW, '-left-1/4 group-hover:left-[34px] group-focus-visible:left-[34px]')}
+      />
+      <span className="-translate-x-3.5 transition-transform duration-[800ms] ease-out group-hover:translate-x-3.5 group-focus-visible:translate-x-3.5 motion-reduce:transition-none">
+        {children}
+      </span>
+      <ArrowRight
+        className={cx(FLOW_ARROW, 'right-[34px] group-hover:-right-1/4 group-focus-visible:-right-1/4')}
+      />
     </a>
   );
 }

@@ -3,7 +3,9 @@ import { Link, NavLink } from 'react-router-dom';
 import { cx } from '@/lib/cx';
 import { mainLinks } from '@/data/navigation';
 import { subscribeProgress } from '@/scroll/scrollBus';
+import { useLanguage } from '@/i18n/LanguageContext';
 import { MenuIcon, Rosette, SearchIcon } from '@/components/ui/Icons';
+import { LanguageSwitch } from '@/components/ui/LanguageSwitch';
 
 /*
   Tiga kolom, bukan space-between. space-between hanya menyamakan jarak, jadi
@@ -17,6 +19,14 @@ const SHELL =
 
 const SOLID = 'border-forest/12 bg-paper/86 backdrop-blur-[14px]';
 
+/*
+  Menu sebaris butuh ±960px dan baru benar-benar di tengah mulai 1100px —
+  di bawah itu rel kiri lebih sempit dari brand-nya. Di 768px dulu label dua
+  kata patah jadi dua baris, garis bawah aktifnya melorot, dan ikon kanan
+  terdorong keluar layar. Jadi di bawah 1100px (tablet, iPad landscape)
+  navbar memakai hamburger seperti ponsel. Angka ini juga dipakai
+  MobileMenu untuk menutup dirinya saat layar melebar.
+*/
 const ICON =
   'grid h-[34px] w-[34px] cursor-pointer place-items-center rounded-lg border border-forest/18 text-forest ' +
   'transition-[background-color,border-color] duration-[350ms] ease-heritage hover:border-gold hover:bg-gold/14';
@@ -29,6 +39,7 @@ const ICON =
 export function Nav({ variant = 'page', menuOpen = false, onOpenMenu }) {
   const heroPassed = useHeroPassed();
   const solid = variant === 'page' || heroPassed;
+  const { t } = useLanguage();
 
   return (
     <header
@@ -51,13 +62,16 @@ export function Nav({ variant = 'page', menuOpen = false, onOpenMenu }) {
         MATARAM
       </Link>
 
-      <nav aria-label="Navigasi utama" className="col-start-2 flex justify-self-center gap-[clamp(14px,2.2vw,34px)] max-[760px]:hidden">
+      <nav
+        aria-label={t({ id: 'Navigasi utama', en: 'Main navigation' })}
+        className="col-start-2 flex justify-self-center gap-[clamp(14px,2.2vw,34px)] max-[1100px]:hidden"
+      >
         {mainLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
             className={cx(
-              'relative pb-[3px] text-[0.76rem] tracking-[0.14em] uppercase text-forest no-underline opacity-[0.78]',
+              'relative pb-[3px] text-[0.76rem] tracking-[0.14em] whitespace-nowrap uppercase text-forest no-underline opacity-[0.78]',
               'transition-opacity duration-[350ms] ease-heritage hover:opacity-100',
               // Garis bawah emas yang menyapu dari kiri; halaman aktif memakainya permanen.
               "after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-left after:scale-x-0 after:bg-gold after:transition-transform after:duration-[450ms] after:ease-heritage after:content-['']",
@@ -65,23 +79,24 @@ export function Nav({ variant = 'page', menuOpen = false, onOpenMenu }) {
               'aria-[current=page]:opacity-100 aria-[current=page]:after:scale-x-100',
             )}
           >
-            {link.label}
+            {t(link.label)}
           </NavLink>
         ))}
       </nav>
 
-      <div className="col-start-3 flex justify-self-end gap-2">
-        <Link to="/archive" aria-label="Cari di arsip" className={ICON}>
+      <div className="col-start-3 flex items-center justify-self-end gap-2">
+        <LanguageSwitch />
+        <Link to="/archive" aria-label={t({ id: 'Cari di arsip', en: 'Search the archive' })} className={ICON}>
           <SearchIcon />
         </Link>
-        {/* Hamburger hanya untuk mobile — di desktop menu utamanya sudah tampil penuh. */}
+        {/* Hamburger untuk ponsel dan tablet — di desktop menu utamanya sudah tampil penuh. */}
         <button
           type="button"
           onClick={onOpenMenu}
           aria-controls="menu"
           aria-expanded={menuOpen}
-          aria-label="Buka menu"
-          className={cx(ICON, 'hidden max-[760px]:grid')}
+          aria-label={t({ id: 'Buka menu', en: 'Open menu' })}
+          className={cx(ICON, 'hidden max-[1100px]:grid')}
         >
           <MenuIcon />
         </button>

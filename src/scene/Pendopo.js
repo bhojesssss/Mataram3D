@@ -62,6 +62,15 @@ const SQRT2 = Math.SQRT2;
 const ROOF_CURVE = 1.75;
 
 /**
+ * Separations that keep overlapping timber from z-fighting. At the ceiling's
+ * ~10 units from a 0.1 near plane the depth buffer resolves well under a
+ * millimetre, so these only need to break exact coplanarity — 6mm and 15mm are
+ * invisible at that distance and still hundreds of depth steps apart.
+ */
+const BEAM_LAP = 0.012; // cross beams are this much shallower than the long pair
+const BEAD_DROP = 0.015; // gilt bead hangs this far proud of its beam
+
+/**
  * CylinderGeometry with 4 radial segments gives a square frustum, but its `radius`
  * is the circumradius. Callers think in half-widths, so convert here and rotate 45°
  * so the flat faces square up with the world axes.
@@ -193,6 +202,8 @@ export class Pendopo extends THREE.Group {
       1.35,
     );
 
+    // Template only, like `roof` above — never rendered directly. Each panel
+    // clones it in `_batikMaterialFor` and fixes its own repeat at 1x1.
     const batik = applyMaps(
       new THREE.MeshStandardMaterial({
         roughness: 1,
@@ -200,7 +211,7 @@ export class Pendopo extends THREE.Group {
         side: THREE.DoubleSide,
       }),
       batikMaps(),
-      3,
+      1,
       0.7,
     );
 
@@ -443,16 +454,27 @@ export class Pendopo extends THREE.Group {
       // Overrun the span so beams lap at the corners rather than leaving a notch.
       const len = r.span * 2 + r.w * 2;
       const beamGeo = this._track(new THREE.BoxGeometry(len, r.h, r.w));
+      // The cross pair is a hair shallower. At full height its top and bottom faces
+      // would be exactly coplanar with the long pair's inside each corner lap, and
+      // with the timber grain running 90° apart the two z-fight into a shimmer the
+      // camera's idle breath never lets settle. Tucked BEAM_LAP/2 inside, the long
+      // beam simply wins the lap.
+      const crossGeo = this._track(new THREE.BoxGeometry(len, r.h - BEAM_LAP, r.w));
       // Thin gilt bead along the lower edge — catches light and reads the run of
-      // the beam even where it sits in the roof's shadow.
-      const beadGeo = this._track(new THREE.BoxGeometry(len, 0.09, r.w + 0.07));
+      // the beam even where it sits in the roof's shadow. It hangs BEAD_DROP proud
+      // of the beam's underside and overruns its ends: flush, the bead's bottom
+      // face was coplanar with the beam's along the whole run, gold and timber
+      // fighting across exactly the face the ceiling shot looks up at.
+      const beadGeo = this._track(
+        new THREE.BoxGeometry(len + BEAD_DROP * 2, 0.09, r.w + 0.07),
+      );
 
       for (let s = 0; s < 4; s++) {
         const rot = (Math.PI / 2) * s;
         const px = s === 1 ? r.span : s === 3 ? -r.span : 0;
         const pz = s === 0 ? r.span : s === 2 ? -r.span : 0;
 
-        const beam = new THREE.Mesh(beamGeo, timber);
+        const beam = new THREE.Mesh(s % 2 === 0 ? beamGeo : crossGeo, timber);
         beam.rotation.y = rot;
         beam.position.set(px, r.y - r.h / 2, pz);
         beam.castShadow = true;
@@ -461,7 +483,7 @@ export class Pendopo extends THREE.Group {
 
         const bead = new THREE.Mesh(beadGeo, gold);
         bead.rotation.y = rot;
-        bead.position.set(px, r.y - r.h + 0.045, pz);
+        bead.position.set(px, r.y - r.h + 0.045 - BEAD_DROP, pz);
         g.add(bead);
       }
     }
@@ -578,13 +600,41 @@ export class Pendopo extends THREE.Group {
   }
 
   /**
+   * A batik material for one tumpang-sari panel.
+   *
+   * `batikMaps()` is a gradient wash now, not a repeating print (see its own
+   * comment for why: a print, however small or blurred, still aliases once a
+   * panel is viewed close to edge-on, which is exactly the `ascend` beat).
+   * A gradient has no period to lose, but tiling it with `repeat > 1` would
+   * reintroduce one — a hard seam every time it wraps — so every panel gets
+   * exactly one tile, one smooth wash top to bottom, regardless of size.
+   * Each panel still gets its own material (not the shared template) so nothing
+   * here depends on panels sharing GPU state they don't actually share.
+   */
+  _batikMaterialFor() {
+    const mat = this.materials.batik.clone();
+    for (const slot of ['map', 'normalMap', 'roughnessMap']) {
+      const src = this.materials.batik[slot];
+      if (!src) continue;
+      const tex = src.clone();
+      tex.needsUpdate = true;
+      tex.repeat.set(1, 1);
+      mat[slot] = tex;
+      this._disposables.push(tex);
+    }
+    mat.needsUpdate = true;
+    this._disposables.push(mat);
+    return mat;
+  }
+
+  /**
    * Tumpang sari — the corbelled ceiling. Successively smaller square frames stacked
    * above the soko guru, each rotated slightly, with batik-faced soffits between.
    * This is the payoff shot when the camera looks up at the `interior` beat.
    */
   _buildTumpangSari() {
     const g = new THREE.Group();
-    const { timber, batik, gold } = this.materials;
+    const { timber, gold } = this.materials;
 
     const tiers = 7;
     const baseHalf = 6.4;
@@ -597,11 +647,17 @@ export class Pendopo extends THREE.Group {
       const half = baseHalf + (topHalf - baseHalf) * t;
       const y = y0 + total * t;
 
-      // Open frame of four beams.
+      // Open frame of four beams. The cross pair is shallower by BEAM_LAP for the
+      // same reason as the blandar in _buildBeams: at equal depth the corner laps
+      // are coplanar top and bottom, and this is the face the camera looks up at.
       const frame = new THREE.Group();
       const beamGeo = this._track(new THREE.BoxGeometry(half * 2 + 0.7, 0.34, 0.42));
+      const crossGeo = this._track(
+        new THREE.BoxGeometry(half * 2 + 0.7, 0.34 - BEAM_LAP, 0.42),
+      );
+      const mat = i % 2 === 0 ? timber : gold;
       for (let s = 0; s < 4; s++) {
-        const beam = new THREE.Mesh(beamGeo, i % 2 === 0 ? timber : gold);
+        const beam = new THREE.Mesh(s % 2 === 0 ? beamGeo : crossGeo, mat);
         beam.rotation.y = (Math.PI / 2) * s;
         const d = half;
         beam.position.set(
@@ -620,17 +676,32 @@ export class Pendopo extends THREE.Group {
         const nextHalf = baseHalf + (topHalf - baseHalf) * ((i + 1) / (tiers - 1));
         const panel = new THREE.Mesh(
           this._track(squareFrustum(half, nextHalf, total / (tiers - 1))),
-          batik,
+          this._batikMaterialFor(),
         );
         panel.position.y = y + total / (tiers - 1) / 2;
         g.add(panel);
       }
     }
 
-    // Centre boss — a gilded rosette right overhead.
+    /*
+     * Centre boss — a gilded rosette right overhead.
+     *
+     * NOT the shared `gold` material (roughness 0.28) — that's tuned for trim
+     * far from any light source, where a tight mirror-like highlight reads as
+     * a sheen. This boss sits only 2.4 units above `ceilingLight` below, and
+     * at full interiority that light peaks near intensity 30. A near-mirror
+     * surface that close to a point light doesn't shade like gilt catching
+     * light — it blows the specular lobe out into a small, hard, near-white
+     * sphere, which is exactly the "glowing ball" the `ascend` beat kept
+     * showing instead of a rosette. A rougher clone spreads that same light
+     * into a broad, soft glow — still bright, still reads as gold, but as an
+     * illuminated surface rather than a blown-out point reflection.
+     */
+    const bossGold = this._track(gold.clone());
+    bossGold.roughness = 0.62;
     const boss = new THREE.Mesh(
       this._track(new THREE.CylinderGeometry(1.3, 0.85, 0.4, 32)),
-      gold,
+      bossGold,
     );
     boss.position.y = Y.ceilingTop + 0.1;
     g.add(boss);
@@ -683,10 +754,42 @@ export class Pendopo extends THREE.Group {
     return mat;
   }
 
+  /**
+   * An ornament material sized to one fascia band.
+   *
+   * Same problem as `_batikMaterialFor`, one size down: `_buildMaterials()`
+   * bakes a single UV repeat (10 around the wrap) for the `ornament` map,
+   * tuned against the penitih tier's fascia — by far the widest, at a
+   * half-width plus flare of roughly 17. The brunjung fascia is less than
+   * half that circumference and, unmodified, packs the same ten repeats of
+   * the rosette print into it — denser still than the batik panels were,
+   * and on the one band closest to the `ascend` camera. Scaling the repeat
+   * with the band's own half-width keeps the print's physical size constant
+   * tier to tier instead of just its repeat count.
+   */
+  _fasciaMaterialFor(half) {
+    const BASE_HALF = 17.1; // penitih's fascia — where repeat 10 was tuned to look right
+    const BASE_REPEAT = 10;
+    const repeat = Math.max(2, Math.round((BASE_REPEAT * half) / BASE_HALF));
+
+    const mat = this.materials.ornament.clone();
+    for (const slot of ['map', 'normalMap', 'roughnessMap']) {
+      const src = this.materials.ornament[slot];
+      if (!src) continue;
+      const tex = src.clone();
+      tex.needsUpdate = true;
+      tex.repeat.set(repeat, 1);
+      mat[slot] = tex;
+      this._disposables.push(tex);
+    }
+    mat.needsUpdate = true;
+    this._disposables.push(mat);
+    return mat;
+  }
+
   /** One roof tier: a main slope plus a shallower flared eave, and a gold fascia. */
   _roofTier(halfBottom, halfTop, yBottom, height, flare = 0.75) {
     const g = new THREE.Group();
-    const { ornament } = this.materials;
     const roof = this._roofMaterialFor(halfBottom, halfTop, height);
 
     const eaveH = height * 0.22;
@@ -716,7 +819,7 @@ export class Pendopo extends THREE.Group {
       this._track(
         squareFrustum(halfBottom + flare + 0.12, halfBottom + flare + 0.05, 0.3),
       ),
-      ornament,
+      this._fasciaMaterialFor(halfBottom + flare),
     );
     fascia.position.y = yBottom + 0.05;
     g.add(fascia);
@@ -843,6 +946,33 @@ export class Pendopo extends THREE.Group {
     for (const t of tiers) g.add(this._roofTier(t.hb, t.ht, t.y, t.h, t.flare));
     g.add(this._buildHipRidges(tiers));
     g.add(this._buildRafterEnds(tiers));
+
+    /*
+     * Cap over the brunjung's open top.
+     *
+     * Every roof tier is a hollow shell (see squareFrustum's `openEnded` note) —
+     * that's fine everywhere else because the next tier up always covers the
+     * opening below it. The brunjung is the last tier, so nothing does that job
+     * for *its* top: the tier's opening there has half-width `ht` (1.1), which
+     * in world space is a square with corners reaching out to `ht * SQRT2`
+     * (≈1.56), and the mustaka disc sitting on top of it has bottom radius 1.0 —
+     * smaller than even the square's flat-edge half-width, let alone its
+     * corners. The gap was invisible from outside (the disc/bulb/spire hide it
+     * in silhouette) but wide open from directly beneath, which is exactly the
+     * camera angle at the `ascend` beat: it read as a glowing hole straight
+     * through the roof to the gilt finial lit in full sun, not as a ceiling.
+     * A simple axis-aligned plate closes it without touching the exterior read.
+     */
+    const brunjung = tiers[tiers.length - 1];
+    const capHalf = brunjung.ht * SQRT2 + 0.15;
+    const cap = new THREE.Mesh(
+      this._track(new THREE.BoxGeometry(capHalf * 2, 0.1, capHalf * 2)),
+      gold,
+    );
+    cap.position.y = Y.brunjungApex - 0.05;
+    cap.castShadow = true;
+    cap.receiveShadow = true;
+    g.add(cap);
 
     // Mustaka — the finial: stacked disc, bulb, and spire.
     const mustaka = new THREE.Group();
