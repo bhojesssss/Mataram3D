@@ -45,14 +45,18 @@ export function SiteLayout() {
   );
 }
 
-/** ~4 detik. Batas menunggu target hash muncul di DOM. */
+/** ~4 detik. Cukup untuk scene 3D selesai boot di mesin yang lambat. */
 const MAX_FRAMES = 240;
 
 /**
  * Halaman baru dibuka dari atas; tautan ber-hash menggeser ke section-nya.
  *
- * Percobaannya diulang per frame karena, datang dari halaman dalam, targetnya
- * belum tentu sudah ada di DOM saat efek ini jalan.
+ * Dua alasan percobaannya diulang per frame. Datang dari halaman dalam,
+ * targetnya belum tentu sudah ada di DOM. Dan di homepage, Lenis baru hidup
+ * setelah scene 3D selesai boot — menggeser sebelum itu akan ditimpa begitu
+ * Lenis mengambil alih posisi scroll. Percobaan terakhir dilakukan tanpa
+ * syarat itu, supaya hash tetap sampai kalau WebGL gagal dan Lenis tak pernah
+ * ada.
  */
 function useRouteScroll({ pathname, hash, key }) {
   useEffect(() => {
@@ -61,12 +65,14 @@ function useRouteScroll({ pathname, hash, key }) {
       return;
     }
 
+    const needsSmooth = pathname === '/';
     let frames = 0;
     let raf = 0;
 
     const attempt = () => {
       frames += 1;
-      if (scrollToHash(hash) || frames >= MAX_FRAMES) return;
+      const lastChance = frames >= MAX_FRAMES;
+      if (scrollToHash(hash, { requireSmooth: needsSmooth && !lastChance }) || lastChance) return;
       raf = requestAnimationFrame(attempt);
     };
     attempt();

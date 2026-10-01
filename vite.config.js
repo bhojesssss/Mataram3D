@@ -26,7 +26,7 @@ export default defineConfig({
         // cache it across deploys where only site code changes.
         manualChunks(id) {
           if (id.includes('node_modules/three')) return 'three';
-          if (id.includes('node_modules/gsap')) return 'motion';
+          if (id.includes('node_modules/gsap') || id.includes('node_modules/lenis')) return 'motion';
           return null;
         },
       },

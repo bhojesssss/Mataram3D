@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useState } from 'react';
 import { Loader } from './Loader';
 
 /*
-  three + gsap hanya dipakai homepage, dan bersama-sama ukurannya
+  three + gsap + lenis hanya dipakai homepage, dan bersama-sama ukurannya
   beberapa ratus kilobyte. Impor dinamis menjaga halaman dalam tetap ringan
   seperti waktu masih enam dokumen terpisah — dulu ini dijamin oleh build
   multi-entry Vite, sekarang oleh batas chunk ini.

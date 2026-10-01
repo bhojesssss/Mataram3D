@@ -11,6 +11,9 @@
 const listeners = new Set();
 let progress = 0;
 
+/** Instance Lenis yang aktif — hanya ada selama homepage terpasang. */
+let smooth = null;
+
 export function publishProgress(value) {
   progress = value;
   for (const fn of listeners) fn(value);
@@ -23,23 +26,29 @@ export function subscribeProgress(fn) {
   return () => listeners.delete(fn);
 }
 
+export function setSmoothScroll(instance) {
+  smooth = instance;
+}
+
 /**
- * Geser ke elemen yang cocok dengan `hash` (mis. '#culture'), menyisakan
- * `offset` untuk navbar yang fixed.
+ * Geser ke elemen yang cocok dengan `hash` (mis. '#culture').
  *
- * Scroll native yang dihaluskan browser. Kamera 3D tidak perlu diantar: scene
- * meredam progress yang diterimanya, jadi lompatan jauh tetap jadi sapuan.
- * Mengembalikan false kalau targetnya belum ada di DOM — pemanggil boleh
- * mencoba lagi di frame berikutnya.
+ * Lewat Lenis kalau homepage sedang aktif; scroll native akan berkelahi dengan
+ * smoothing-nya. Mengembalikan false kalau geseran tidak jadi dilakukan —
+ * targetnya belum ada di DOM, atau `requireSmooth` diminta sementara Lenis
+ * belum hidup. Pemanggil boleh mencoba lagi di frame berikutnya.
  */
-export function scrollToHash(hash, { offset = -70 } = {}) {
+export function scrollToHash(hash, { offset = -70, requireSmooth = false } = {}) {
   const target = hash && hash !== '#' ? document.querySelector(hash) : null;
   if (!target) return false;
 
-  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  window.scrollTo({
-    top: target.getBoundingClientRect().top + window.scrollY + offset,
-    behavior: reduce ? 'auto' : 'smooth',
-  });
+  if (smooth) {
+    smooth.scrollTo(target, { offset, duration: 1.5 });
+    return true;
+  }
+
+  if (requireSmooth) return false;
+
+  target.scrollIntoView({ behavior: 'smooth' });
   return true;
 }

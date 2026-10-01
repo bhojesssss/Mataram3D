@@ -77,27 +77,11 @@ const LIGHT_PATH = [
   { beat: 'end',       sun: '#FFC178', sunI: 3.2, amb: '#E2E7DC', ambI: 1.02, fog: '#F1E8D4', fogD: 0.0014, sky: 1.0 },
 ];
 
-/**
- * How fast the scene catches up with the scroll position, in e-foldings per
- * second (see CameraRig.damp). This is the smoothing Lenis used to put on the
- * page scroll — its 1.15s exponential curve was half-way there after ~0.115s,
- * which is λ ≈ 6. Kept here so a wheel notch still glides instead of stepping
- * the light and the dancer's pose, now that the page scroll itself is native.
- */
-const PROGRESS_DAMPING = 6;
-
-/** Material slots that can hold a texture worth uploading ahead of time. */
-const TEXTURE_SLOTS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap'];
-
 export class Scene {
   constructor(canvas) {
     this.canvas = canvas;
     this.clock = new THREE.Clock();
-    // `progress` is what the frame renders; `_targetProgress` is where the
-    // scroll actually is. _tick damps one toward the other.
     this.progress = 0;
-    this._targetProgress = 0;
-    this._disposed = false;
     this._running = false;
     this._frame = null;
     this._shadowTick = 0;
@@ -147,10 +131,6 @@ export class Scene {
     this.tier = detectTier(this.renderer);
     this.renderScale = 1;
     this.adaptor = new ResolutionAdaptor({
-      // Under a frame cap every frame takes at least the cap's interval; judged
-      // against 60fps the adaptor would read that as struggling and shed
-      // resolution the machine doesn't need to lose.
-      target: this.tier.maxFps ? 1000 / this.tier.maxFps : 16.7,
       onChange: (scale, median) => {
         this.renderScale = scale;
         this._applyResolution();
@@ -168,7 +148,7 @@ export class Scene {
     // courtyard and pale sky clip together into one flat field.
     this.renderer.toneMappingExposure = 0.92;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = this.tier.softShadows ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     // Shadows are refreshed on a cadence rather than every frame. The sun never
     // moves and the architecture never moves, so re-rendering the whole map from
     // ~200 casters at 60Hz was costing more than the entire rest of the frame.
@@ -182,8 +162,12 @@ export class Scene {
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.FogExp2(new THREE.Color(sceneColors.skyLow), 0.0032);
 
-    const [w, h] = this._viewport();
-    this.camera = new THREE.PerspectiveCamera(48, w / h, 0.1, 2000);
+    this.camera = new THREE.PerspectiveCamera(
+      48,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      2000,
+    );
     // Matches CAMERA_KEYS[0] so the very first frame is already the hero pose.
     this.camera.position.set(0, 7.0, 66);
   }
@@ -342,7 +326,8 @@ export class Scene {
    * frame time.
    */
   _applyResolution() {
-    const [w, h] = this._viewport();
+    const w = window.innerWidth;
+    const h = window.innerHeight;
     const ratio = pixelRatioFor(this.tier, w, h, this.renderScale);
 
     this.renderer.setPixelRatio(ratio);
@@ -358,22 +343,6 @@ export class Scene {
     this.particles?.onResize(ratio);
   }
 
-  /**
-   * The canvas's CSS size, which is what the drawing buffer is fitted to.
-   *
-   * Read from the canvas rather than the window because the two differ on
-   * phones, and the difference is the point: the canvas is sized to the large
-   * viewport (100vh), so it stays put while the browser toolbar slides in and
-   * out with the scroll. window.innerHeight changes on every slide, and
-   * following it meant reallocating every render target mid-gesture.
-   */
-  _viewport() {
-    return [
-      this.canvas.clientWidth || window.innerWidth,
-      this.canvas.clientHeight || window.innerHeight,
-    ];
-  }
-
   _initContent() {
     this.environment = new Environment(this.tier);
     this.scene.add(this.environment);
@@ -387,8 +356,9 @@ export class Scene {
     this.dancer = new Dancer();
     this.dancer.position.set(0, 1.2, 0);
     this.scene.add(this.dancer);
+    window.__scene = this; // TEMP: screenshot hook, remove
 
-    this.particles = new Particles(this.tier.particles);
+    this.particles = new Particles(900);
     this.scene.add(this.particles);
   }
 
@@ -440,43 +410,15 @@ export class Scene {
   }
 
   setProgress(t) {
-    this._targetProgress = THREE.MathUtils.clamp(t, 0, 1);
-  }
-
-  /**
-   * Pays, while the loader still covers the page, for everything the first
-   * scroll would otherwise pay for mid-gesture: the dancer's download, the
-   * upload of her textures, and a shader program for every material — including
-   * the ones outside the hero shot, which three.js would otherwise compile the
-   * first time the camera turns to face them.
-   */
-  async warmUp() {
-    await this.dancer.loaded;
-    if (this._disposed) return;
-
-    this.dancer.traverse((o) => {
-      for (const material of [].concat(o.material ?? [])) {
-        for (const slot of TEXTURE_SLOTS) {
-          if (material[slot]?.isTexture) this.renderer.initTexture(material[slot]);
-        }
-      }
-    });
-
-    await this.renderer.compileAsync(this.scene, this.camera);
+    this.progress = THREE.MathUtils.clamp(t, 0, 1);
   }
 
   start() {
     if (this._running) return;
     this._running = true;
     this.clock.start();
-    // A couple of ms of slack: rAF timestamps jitter, and a strict comparison
-    // would skip a frame that came in a hair early and drop 30fps to 20.
-    const minInterval = this.tier.maxFps ? 1000 / this.tier.maxFps - 2 : 0;
-    let last = -Infinity;
-    const loop = (now) => {
+    const loop = () => {
       this._frame = requestAnimationFrame(loop);
-      if (now - last < minInterval) return;
-      last = now;
       this._tick();
     };
     this._frame = requestAnimationFrame(loop);
@@ -497,10 +439,6 @@ export class Scene {
     // Unclamped delta — the adaptor needs the true cost of the frame, including
     // the slow ones, or it would never see the problem it exists to fix.
     this.adaptor.sample(raw);
-
-    this.progress = this.rig.reducedMotion
-      ? this._targetProgress
-      : CameraRig.damp(this.progress, this._targetProgress, PROGRESS_DAMPING, dt);
 
     // No shadow-map refresh here, deliberately.
     //
@@ -540,13 +478,7 @@ export class Scene {
   }
 
   _onResize() {
-    // On a phone most resize events are the toolbar, which leaves the canvas
-    // untouched (see _viewport). Nothing to reallocate for those.
-    const [w, h] = this._viewport();
-    if (w === this._size?.[0] && h === this._size?.[1]) return;
-    this._size = [w, h];
-
-    this.camera.aspect = w / h;
+    this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this._applyResolution();
   }
@@ -558,7 +490,6 @@ export class Scene {
   }
 
   dispose() {
-    this._disposed = true;
     this.stop();
     window.removeEventListener('resize', this._onResize);
     document.removeEventListener('visibilitychange', this._onVisibility);

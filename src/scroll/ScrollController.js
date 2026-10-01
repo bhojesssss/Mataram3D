@@ -1,31 +1,23 @@
+import Lenis from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { resolveBeats } from '../config/tokens.js';
-import { publishProgress } from './scrollBus.js';
+import { publishProgress, setSmoothScroll } from './scrollBus.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
 /**
  * Ties page scroll to the 3D scene and to the DOM reveals.
  *
- * There is exactly one source of truth for "where are we": the page's native
- * scroll position, normalised to 0→1. The camera, the lighting, and the nav all
- * read that same number, so the 3D and the copy can never disagree about which
- * beat is on screen.
+ * There is exactly one source of truth for "where are we": Lenis's smoothed scroll
+ * position, normalised to 0→1. The camera, the lighting, and the nav all read
+ * that same number. Nothing here observes raw wheel events, which is why the
+ * 3D and the copy can never disagree about which beat is on screen.
  *
- * Scroll itself is the browser's own. This used to run through Lenis, and on
- * phones that was the cause of the homepage scroll freezing just below the hero:
- * Lenis listens to touchstart/touchmove with { passive: false } even when it
- * leaves touch alone (syncTouch: false), so every gesture had to wait for the
- * main thread — and a few seconds after load the main thread is busy taking in
- * the dancer model. On the desktop the same dependency meant any main-thread
- * stall stopped the wheel scroll dead. Native scroll keeps moving regardless.
- *
- * The smoothing Lenis gave the 3D now lives in the scene instead: Scene damps the
- * progress it is handed (removing the step of a wheel notch), and CameraRig damps
- * the camera on top of that (giving it weight once moving). Both stages are kept
- * for the reason they always existed; only the page scroll stopped depending on
- * JavaScript.
+ * Lenis smooths the input; CameraRig damps the response. Two stages of smoothing
+ * sounds like one too many, but they solve different problems — Lenis removes the
+ * step quantisation of a wheel notch, and the rig's damping gives the camera weight
+ * once it is moving. Together they are what "smooth" actually means here.
  */
 
 /*
@@ -62,7 +54,7 @@ export class ScrollController {
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
     this._measure();
-    this._initScroll();
+    this._initLenis();
     this._initReveals();
     this._initResize();
   }
@@ -81,47 +73,49 @@ export class ScrollController {
    * Section offsets move when the viewport changes, so the beat table has to be
    * rebuilt. Debounced — resize fires in bursts and re-measuring mid-drag is both
    * wasteful and visibly jumpy.
-   *
-   * On touch devices a resize that leaves the width alone is the browser toolbar
-   * collapsing or returning as the reader scrolls. That is not a layout change
-   * worth re-measuring every section for in the middle of a gesture (ScrollTrigger
-   * ignores it for the same reason); only the progress is re-read.
    */
   _initResize() {
     let timer = null;
-    let width = window.innerWidth;
-    const touch = ScrollTrigger.isTouch === 1;
-
     this._onResize = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        if (touch && window.innerWidth === width) {
-          this._onScroll();
-          return;
-        }
-        width = window.innerWidth;
         this._measure();
         ScrollTrigger.refresh();
-        this._onScroll();
+        this._apply();
       }, 180);
     };
     window.addEventListener('resize', this._onResize);
   }
 
-  /**
-   * Passive, so the browser never waits on this handler before scrolling. The
-   * limit is read fresh each time rather than cached: images and late fonts
-   * change the page height without a resize, and a stale limit would make the
-   * camera finish its path before the page does.
-   */
-  _initScroll() {
-    this._onScroll = () => {
-      const limit = document.documentElement.scrollHeight - window.innerHeight;
-      this.progress = limit > 0 ? Math.min(Math.max(window.scrollY / limit, 0), 1) : 0;
+  _initLenis() {
+    this.lenis = new Lenis({
+      // ~1s to settle. Long enough to feel weighted, short enough not to lag intent.
+      duration: 1.15,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      // Leave touch on the platform's own momentum — hijacking it fights the OS
+      // and feels broken. (Lenis calls this `syncTouch`; false is also its default,
+      // set explicitly so the intent survives a version bump.)
+      syncTouch: false,
+      touchMultiplier: 1.6,
+      wheelMultiplier: 1,
+    });
+
+    // Supaya <HashLink> bisa menggeser halaman lewat smoothing yang sama.
+    setSmoothScroll(this.lenis);
+
+    this.lenis.on('scroll', ({ scroll, limit }) => {
+      this.progress = limit > 0 ? Math.min(scroll / limit, 1) : 0;
       this._apply();
-    };
-    window.addEventListener('scroll', this._onScroll, { passive: true });
-    this._onScroll();
+      ScrollTrigger.update();
+    });
+
+    // Drive Lenis from GSAP's ticker so both run on one RAF, in a fixed order.
+    this._tick = (time) => this.lenis.raf(time * 1000);
+    gsap.ticker.add(this._tick);
+    gsap.ticker.lagSmoothing(0);
+
+    this._apply();
   }
 
   /** Push the current progress into everything that depends on it. */
@@ -165,20 +159,22 @@ export class ScrollController {
   refresh() {
     this._measure();
     ScrollTrigger.refresh();
-    this._onScroll();
+    this._apply();
   }
 
   dispose() {
+    setSmoothScroll(null);
     // Nav membaca ini untuk memutuskan kapan jadi padat; tanpa reset, nilai
     // terakhir dari homepage akan terbawa saat pembaca kembali ke sana.
     publishProgress(0);
     window.removeEventListener('resize', this._onResize);
-    window.removeEventListener('scroll', this._onScroll);
+    gsap.ticker.remove(this._tick);
     ScrollTrigger.getAll().forEach((t) => t.kill());
     // Killing the triggers does not wipe the scroll positions ScrollTrigger
     // caches per scroller. In the MPA those died with the page; in an SPA they
     // outlive the route change and the next refresh() restores them, dropping
     // the reader back where they left the homepage instead of at the hero.
     ScrollTrigger.clearScrollMemory();
+    this.lenis.destroy();
   }
 }

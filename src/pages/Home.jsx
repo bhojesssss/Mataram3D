@@ -425,7 +425,7 @@ function PalaceBeat() {
           menahan penari di sepertiga kiri, dan panel penuh di tengah akan
           menutupi tepat satu-satunya gambar yang jadi alasan section ini ada.
         */}
-        <div className="ml-auto w-[min(100%,620px)] rounded-lg bg-forest/90 px-[clamp(22px,3vw,40px)] py-8 text-cream backdrop-blur-[3px] pointer-coarse:backdrop-blur-none">
+        <div className="ml-auto w-[min(100%,620px)] rounded-lg bg-forest/90 px-[clamp(22px,3vw,40px)] py-8 text-cream backdrop-blur-[3px]">
           <p data-reveal="" className="mb-4 text-[0.72rem] font-medium tracking-[0.26em] uppercase text-tan">
             {t({ id: 'Istana', en: 'The Palace' })}
           </p>
