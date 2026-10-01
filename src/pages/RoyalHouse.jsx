@@ -40,7 +40,13 @@ export default function RoyalHouse() {
             </p>
 
             {generations.map((nodes, i) => (
-              <Generation key={nodes[0].name} first={i === 0} nodes={nodes} onOpen={setMember} />
+              <Generation
+                key={nodes[0].name}
+                first={i === 0}
+                nodes={nodes}
+                parent={parentColumn(generations[i - 1], nodes)}
+                onOpen={setMember}
+              />
             ))}
           </div>
         </Wrap>
@@ -124,44 +130,100 @@ function Header() {
 /* ── pohon silsilah ──────────────────────────────────────────────────────── */
 
 /**
+ * Kolom generasi sebelumnya tempat garis sebuah cabang berasal.
+ *
+ * Cabang yang semua anggotanya dari satu keraton meneruskan garis anggota
+ * generasi sebelumnya yang keratonnya sama — Pakubuwono XIII dan GKR
+ * Wandansari turun dari Pakubuwono III, bukan dari celah antara Surakarta dan
+ * Yogyakarta. Tanpa kecocokan seperti itu (mis. pecahan Giyanti sendiri, yang
+ * induknya satu raja di tengah), hasilnya null dan garis turun dari tengah.
+ */
+function parentColumn(prev, nodes) {
+  if (!prev || prev.length < 2 || nodes.length < 2) return null;
+  const court = nodes[0].court;
+  if (!court || nodes.some((node) => node.court !== court)) return null;
+  const column = prev.findIndex((node) => node.court === court);
+  return column === -1 ? null : column;
+}
+
+const LINE = 'absolute bg-forest/28';
+
+/**
  * Satu generasi.
  *
- * Generasi dengan dua node adalah pecahan Perjanjian Giyanti 1755, dan
- * mendapat palang horizontal tempat garisnya membelah jadi dua keraton.
+ * Generasi dengan lebih dari satu node adalah cabang, dan selalu berdampingan
+ * — juga di ponsel. Dulu di ponsel kartunya ditumpuk sementara palangnya tetap
+ * horizontal, jadi ujung palang menggantung tanpa menyentuh apa pun dan garis
+ * yang turun dari kartu bawah terbaca seolah generasi berikutnya keturunan
+ * kartu itu.
+ *
+ * Garis cabang digambar di dalam tiap kolom, setinggi 26px di atas kartunya:
+ * setengah palang ke arah saudaranya (ditarik setengah gap supaya bertemu di
+ * tengah celah) dan tetesan ke kartu. Kolom yang meneruskan garis induk
+ * (`parent`) tetesannya ditarik sampai ke atas, menyambung lurus ke kartu
+ * induk tepat di atasnya; kalau `parent` null, tangkainya turun dari tengah.
  */
-function Generation({ first, nodes, onOpen }) {
+function Generation({ first, nodes, parent, onOpen }) {
   const { t } = useLanguage();
   const split = nodes.length > 1;
 
   return (
     <div className="flex flex-col items-center">
       {/* Penyambung vertikal turun dari generasi sebelumnya. */}
-      {!first && <span aria-hidden="true" className="h-[26px] w-px bg-forest/28" />}
-      {split && <span aria-hidden="true" className="h-px w-[60%] bg-forest/28 min-[761px]:w-[min(520px,86%)]" />}
+      {!first && !split && <span aria-hidden="true" className="h-[26px] w-px bg-forest/28" />}
 
-      <div className="grid w-full max-w-[640px] grid-cols-1 gap-[clamp(12px,1.6vw,26px)] min-[761px]:grid-cols-[repeat(auto-fit,minmax(210px,1fr))]">
-        {nodes.map((node) => (
-          <button
-            key={node.name}
-            type="button"
-            disabled={!HAS_DIALOG}
-            onClick={() => onOpen(node)}
-            className="cursor-pointer rounded-lg border border-forest/18 bg-paper px-5 py-[18px] text-center transition-[border-color,background-color] duration-[400ms] ease-heritage hover:border-gold disabled:cursor-default"
-          >
-            <span className="mb-[7px] block font-display text-[clamp(1.1rem,1.8vw,1.55rem)] leading-[1.2] text-forest">
-              {node.name}
-            </span>
-            <span className="block text-[0.62rem] tracking-[0.2em] uppercase text-gold-deep">{t(node.reign)}</span>
-            {node.court && (
-              <span className="mt-[11px] block text-[0.56rem] tracking-[0.2em] uppercase text-ink/72">
-                {node.court}
-              </span>
+      <div
+        className={cx(
+          'relative grid w-full max-w-[640px]',
+          split && 'gap-x-(--gap) [--gap:clamp(12px,1.6vw,26px)]',
+        )}
+        style={{ gridTemplateColumns: `repeat(${nodes.length}, minmax(0, 1fr))` }}
+      >
+        {split && parent == null && <span aria-hidden="true" className={cx(LINE, 'top-0 left-1/2 h-[13px] w-px')} />}
+
+        {nodes.map((node, i) => (
+          <div key={node.name} className={cx('relative flex flex-col', split && 'pt-[26px]')}>
+            {split && (
+              <>
+                {i > 0 && <span aria-hidden="true" className={cx(LINE, 'top-[13px] right-1/2 left-[calc(var(--gap)/-2)] h-px')} />}
+                {i < nodes.length - 1 && (
+                  <span aria-hidden="true" className={cx(LINE, 'top-[13px] right-[calc(var(--gap)/-2)] left-1/2 h-px')} />
+                )}
+                <span
+                  aria-hidden="true"
+                  className={cx(LINE, 'left-1/2 w-px', i === parent ? 'top-0 h-[26px]' : 'top-[13px] h-[13px]')}
+                />
+              </>
             )}
-            {/* Selalu ada untuk pembaca layar; ikut terlihat kalau <dialog> tak didukung. */}
-            <span className={cx('mt-[11px] block text-[0.74rem] leading-[1.65] text-ink/72', HAS_DIALOG && 'sr-only')}>
-              {t(node.role)}
-            </span>
-          </button>
+
+            <button
+              type="button"
+              disabled={!HAS_DIALOG}
+              onClick={() => onOpen(node)}
+              className={cx(
+                // flex-col: isi rata atas, bukan ditengahkan seperti bawaan <button> — kalau
+                // nama keraton di satu kartu cabang patah dua baris, nama raja di kedua
+                // kartu tetap sebaris.
+                'flex flex-1 cursor-pointer flex-col rounded-lg border border-forest/18 bg-paper px-5 py-[18px] text-center transition-[border-color,background-color] duration-[400ms] ease-heritage hover:border-gold disabled:cursor-default',
+                // Dua kartu berdampingan di 425px cuma punya ±185px; padding penuh memotong judulnya.
+                split && 'max-[760px]:px-2.5 max-[760px]:py-4',
+              )}
+            >
+              <span className="mb-[7px] block font-display text-[clamp(1.1rem,1.8vw,1.55rem)] leading-[1.2] text-forest">
+                {node.name}
+              </span>
+              <span className="block text-[0.62rem] tracking-[0.2em] uppercase text-gold-deep">{t(node.reign)}</span>
+              {node.court && (
+                <span className="mt-[11px] block text-[0.56rem] tracking-[0.2em] uppercase text-ink/72">
+                  {node.court}
+                </span>
+              )}
+              {/* Selalu ada untuk pembaca layar; ikut terlihat kalau <dialog> tak didukung. */}
+              <span className={cx('mt-[11px] block text-[0.74rem] leading-[1.65] text-ink/72', HAS_DIALOG && 'sr-only')}>
+                {t(node.role)}
+              </span>
+            </button>
+          </div>
         ))}
       </div>
     </div>

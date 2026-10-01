@@ -5,8 +5,7 @@
  * ditulis sebagai class Tailwind arbitrer supaya letak di denah dan isi panel
  * deskripsinya bersumber dari satu entri.
  *
- * `accent` menandai dua ruang yang punya bobot bahkan saat tidak dipilih:
- * 'gate' untuk gerbang ambang, 'heart' untuk pendopo di jantung kompleks.
+ * `small` untuk ruang yang kotaknya sempit di denah — labelnya diperkecil.
  *
  * `label` dan `name` adalah nama tempat — proper noun, sama di kedua bahasa.
  * `gloss` (arti harfiah/istilah pendamping) dan `desc` adalah pasangan
@@ -52,7 +51,7 @@ export const spaces = [
     gloss: { id: 'Gerbang Utama', en: 'The Principal Gate' },
     name: 'Kori Kamandungan',
     area: '[grid-area:4/1/5/4]',
-    accent: 'gate',
+    small: true,
     desc: {
       id: 'Ambang batas antara dunia publik dan istana bagian dalam. Melewatinya, protokol berubah sepenuhnya.',
       en: 'The threshold between the public world and the inner court. Beyond it, protocol changes entirely.',
@@ -76,7 +75,6 @@ export const spaces = [
     gloss: { id: 'Pendopo Agung', en: 'The Great Pavilion' },
     name: 'Pendopo Sasana Sewaka',
     area: '[grid-area:5/2/7/3]',
-    accent: 'heart',
     desc: {
       id: 'Ruang terbuka utama istana, tempat menerima tamu dan menggelar upacara. Terbuka di semua sisi: istana tak menyembunyikan apa pun dari yang disambutnya.',
       en: 'The main open hall of the keraton, where the court receives guests and holds ceremony. Open on all sides: the palace has nothing to hide from those it welcomes.',

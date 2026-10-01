@@ -307,7 +307,42 @@
 @media (prefers-reduced-transparency: reduce) {
   :root {
     --band-alpha: 0.97;
+    --glass-alpha: 0.96;
   }
+}
+
+/*
+  Kaca cair — panel lepas yang mengambang di atas halaman (menu mobile).
+
+  Bedanya dengan kaca buram biasa ada di tepinya: garis sorot putih di atas,
+  pantulan tipis di bawah, dan kilap miring di permukaannya, jadi panelnya
+  terbaca sebagai benda tebal yang membiaskan cahaya, bukan sekadar lapisan
+  susu. Saturasi dinaikkan supaya warna di belakangnya tetap hidup setelah
+  diburamkan. Tint 72%: di bawah itu teks sekunder mulai tenggelam saat
+  panelnya menutupi bagian pendopo yang gelap.
+
+  Hanya untuk panel seukuran komponen. Jangan dipasang di permukaan selebar
+  viewport dan setinggi beberapa layar — lihat catatan --band-alpha soal
+  biaya blur di atas canvas 3D.
+*/
+@utility liquid-glass {
+  background:
+    linear-gradient(
+      160deg,
+      rgb(255 255 255 / 0.5),
+      rgb(255 255 255 / 0.08) 38%,
+      rgb(255 255 255 / 0) 62%,
+      rgb(255 255 255 / 0.16)
+    ),
+    rgb(var(--surface-tint) / var(--glass-alpha, 0.72));
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgb(255 255 255 / 0.55);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.8),
+    inset 0 -1px 1px rgb(255 255 255 / 0.25),
+    0 24px 60px -16px rgb(27 47 33 / 0.38),
+    0 2px 8px rgb(27 47 33 / 0.08);
 }
 
 /*
@@ -469,6 +504,75 @@
   to {
     opacity: 0;
     transform: scale(0.85);
+  }
+}
+
+/*
+  ── MENU MOBILE ───────────────────────────────────────────────────────────
+
+  Gerak components/layout/MobileMenu.jsx.
+
+  Buka: veil memudar masuk (0.4s); panel turun dari balik tepi atas layar
+  dengan kurva yang melambat panjang tanpa memantul (0.55s); isinya menyusul
+  baris demi baris searah panel, 35ms antar baris, mulai 0.08s.
+  Tutup: panel naik kembali ke atas, makin cepat sampai hilang (0.32s) —
+  lebih cepat dari buka, karena orang yang menutup menu sudah selesai
+  dengannya, jangan disuruh menunggu.
+
+  Jarak geser -100% ditambah 40px: 10px celah panel dari tepi atas, sisanya
+  bayangan panel, supaya bayangannya pun tidak tertinggal di layar.
+*/
+@layer components {
+  .menu-veil {
+    background: rgb(27 47 33 / 0.22);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    animation: menu-fade-in 0.4s var(--ease-heritage) both;
+  }
+  .menu-veil.is-leaving {
+    animation: menu-fade-out 0.32s ease-in both;
+  }
+
+  .menu-sheet {
+    animation: menu-sheet-in 0.55s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  .menu-sheet.is-leaving {
+    animation: menu-sheet-out 0.32s cubic-bezier(0.4, 0, 1, 1) both;
+  }
+
+  .menu-item {
+    animation: menu-item-in 0.5s cubic-bezier(0.32, 0.72, 0, 1) calc(0.08s + var(--i, 0) * 35ms) both;
+  }
+}
+
+@keyframes menu-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes menu-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes menu-sheet-in {
+  from {
+    transform: translateY(calc(-100% - 40px));
+  }
+}
+
+@keyframes menu-sheet-out {
+  to {
+    transform: translateY(calc(-100% - 40px));
+  }
+}
+
+@keyframes menu-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
   }
 }
 

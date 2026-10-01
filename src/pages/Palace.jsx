@@ -23,7 +23,9 @@ export default function Palace() {
   // Denah itu satu-satunya kontrol; kartu di sebelahnya cuma menampilkan apa
   // yang sedang dipilih. Karena kartunya diperbarui tanpa memindahkan fokus,
   // ia diberi aria-live supaya pembaca layar tetap mendengar perubahannya.
-  const [activeId, setActiveId] = useState('pendopo');
+  // Belum ada yang terpilih sampai pembaca sendiri menyentuh denah; sampai
+  // saat itu kartunya berisi ajakan untuk memilih.
+  const [activeId, setActiveId] = useState(null);
   const active = spaces.find((space) => space.id === activeId);
 
   return (
@@ -59,11 +61,20 @@ export default function Palace() {
                 className="h-[clamp(160px,17vw,240px)] border-0"
               />
               <div className="p-[clamp(22px,2.6vw,34px)]">
-                <p className="mb-3.5 text-[0.64rem] tracking-[0.28em] uppercase text-gold-deep">{t(active.gloss)}</p>
+                <p className="mb-3.5 text-[0.64rem] tracking-[0.28em] uppercase text-gold-deep">
+                  {t(active?.gloss ?? { id: 'Denah keraton', en: 'Palace plan' })}
+                </p>
                 <h2 className="mb-4 font-display text-[clamp(1.5rem,2.6vw,2.35rem)] font-light leading-[1.15] text-forest">
-                  {active.name}
+                  {active?.name ?? t({ id: 'Pilih satu ruang', en: 'Choose a ground' })}
                 </h2>
-                <p className="text-[0.88rem] leading-[1.9] text-ink/88 text-pretty">{t(active.desc)}</p>
+                <p className="text-[0.88rem] leading-[1.9] text-ink/88 text-pretty">
+                  {t(
+                    active?.desc ?? {
+                      id: 'Sentuh ruang mana pun di denah untuk membaca apa yang terjadi di sana.',
+                      en: 'Touch any ground on the plan to read what happens there.',
+                    },
+                  )}
+                </p>
               </div>
             </div>
           </div>
@@ -109,9 +120,6 @@ function PlanBoard({ activeId, onSelect }) {
       </p>
 
       <div className="relative rounded-lg border border-forest/18 bg-paper p-[clamp(14px,1.8vw,26px)]">
-        {/* Sumbu kosmologis utara–selatan yang jadi dasar tata letak kompleks. */}
-        <span aria-hidden="true" className="absolute top-0 bottom-0 left-1/2 w-px bg-forest/14" />
-
         <div
           role="group"
           aria-label={t({ id: 'Pilih ruang keraton', en: 'Select a palace ground' })}
@@ -134,12 +142,8 @@ function PlanBoard({ activeId, onSelect }) {
                 'relative grid cursor-pointer place-items-center rounded-lg border border-forest/18 p-1.5 text-center leading-[1.6] whitespace-pre-line uppercase text-forest',
                 'transition-[background-color,border-color] duration-[350ms] ease-heritage hover:bg-forest/6',
                 'aria-pressed:border-[1.5px] aria-pressed:border-gold aria-pressed:bg-gold/28',
-                // Gerbang terbaca sebagai ambang dan pendopo sebagai jantung
-                // denah, jadi keduanya sudah punya bobot bahkan saat tidak dipilih.
-                space.accent === 'gate' && 'bg-forest/10',
-                space.accent === 'heart' && 'border-gold/55 bg-gold/8',
-                space.small || space.accent === 'gate'
-                  ? 'text-[0.46rem] tracking-[0.14em] min-[521px]:text-[0.56rem]'
+                space.small
+                  ?'text-[0.46rem] tracking-[0.14em] min-[521px]:text-[0.56rem]'
                   : 'text-[0.5rem] tracking-[0.08em] min-[521px]:text-[0.6rem] min-[521px]:tracking-[0.16em]',
               )}
             >

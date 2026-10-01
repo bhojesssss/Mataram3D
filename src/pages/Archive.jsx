@@ -10,6 +10,9 @@ import { Frame } from '@/components/ui/Frame';
 import { ButtonOutline, Eyebrow } from '@/components/ui/Type';
 import { HEAD_PADDING, PageTitle } from '@/components/ui/Page';
 
+/** Kartu yang tampil di ponsel sebelum pembaca meminta sisanya. */
+const COLLAPSED = 4;
+
 export default function Archive() {
   const { t, lang } = useLanguage();
 
@@ -23,7 +26,9 @@ export default function Archive() {
 
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
+  const [expanded, setExpanded] = useState(false);
   const inputRef = useRef(null);
+  const moreRef = useRef(null);
   const { status, records } = useArchiveRecords();
 
   /*
@@ -59,7 +64,15 @@ export default function Archive() {
   const reset = () => {
     setQuery('');
     setCategory('All');
+    setExpanded(false);
     inputRef.current?.focus();
+  };
+
+  const toggleMore = () => {
+    setExpanded((open) => !open);
+    // Saat dilipat, daftar memendek di atas tombolnya — tanpa ini tombol itu
+    // terlempar jauh ke atas layar dan pembaca kehilangan tempatnya.
+    if (expanded) requestAnimationFrame(() => moreRef.current?.scrollIntoView({ block: 'center' }));
   };
 
   return (
@@ -96,9 +109,9 @@ export default function Archive() {
           <form
             role="search"
             onSubmit={(e) => e.preventDefault()}
-            className="mx-auto flex max-w-[620px] flex-wrap items-center gap-2.5"
+            className="mx-auto flex max-w-[620px] items-center gap-2.5 max-[760px]:items-stretch max-[760px]:gap-2"
           >
-            <div className="flex min-w-0 flex-[1_0_100%] items-center gap-3.5 rounded-lg border border-forest/32 bg-forest/5 px-[22px] py-1.5 focus-within:border-gold min-[761px]:flex-1">
+            <div className="flex min-w-0 flex-1 items-center gap-3.5 rounded-lg border border-forest/32 bg-forest/5 px-[22px] py-1.5 focus-within:border-gold max-[760px]:gap-2.5 max-[760px]:px-3.5 max-[760px]:py-0">
               <span aria-hidden="true" className="text-base leading-none text-gold-deep">
                 &#8981;
               </span>
@@ -114,13 +127,14 @@ export default function Archive() {
                 placeholder={t({ id: 'Cari arsip…', en: 'Search the archive…' })}
                 autoComplete="off"
                 // Silang biru bawaan Chrome di luar palet, dan Reset sudah melakukan tugasnya.
-                className="min-w-0 flex-1 border-0 bg-transparent py-3 text-[0.9rem] font-light text-ink outline-none placeholder:text-ink/72 [&::-webkit-search-cancel-button]:appearance-none"
+                // Di ponsel 16px: di bawah itu Safari iOS memperbesar halaman tiap kali kolom ini disentuh.
+                className="min-w-0 flex-1 border-0 bg-transparent py-3 text-[0.9rem] font-light text-ink outline-none placeholder:text-ink/72 max-[760px]:py-2 max-[760px]:text-base [&::-webkit-search-cancel-button]:appearance-none"
               />
             </div>
             <button
               type="button"
               onClick={reset}
-              className="flex-[1_0_100%] cursor-pointer rounded-lg border border-forest/32 bg-forest/12 px-5 py-3 text-center text-[0.62rem] tracking-[0.22em] whitespace-nowrap uppercase text-forest transition-colors duration-[350ms] ease-heritage hover:bg-forest/20 min-[761px]:flex-none"
+              className="flex-none cursor-pointer rounded-lg border border-forest/32 bg-forest/12 px-5 py-3 text-center text-[0.62rem] tracking-[0.22em] whitespace-nowrap uppercase text-forest transition-colors duration-[350ms] ease-heritage hover:bg-forest/20 max-[760px]:px-3.5 max-[760px]:py-0 max-[760px]:text-[0.58rem] max-[760px]:tracking-[0.18em]"
             >
               {t({ id: 'Reset', en: 'Reset' })}
             </button>
@@ -158,15 +172,35 @@ export default function Archive() {
               {t({ id: 'Membuka koleksi…', en: 'Opening the collection…' })}
             </p>
           ) : shown.length > 0 ? (
-            /*
-              auto-fill, bukan auto-fit: menyaring sampai tersisa satu hasil harus
-              meninggalkan kartu itu selebar kolom, bukan melebar sepenuh grid.
-            */
-            <div className="grid grid-cols-2 gap-[clamp(12px,1.6vw,22px)] min-[521px]:grid-cols-[repeat(auto-fill,minmax(210px,1fr))]">
-              {shown.map((record) => (
-                <RecordCard key={record.id ?? record.title?.en ?? record.title} record={record} />
-              ))}
-            </div>
+            <>
+              {/*
+                auto-fill, bukan auto-fit: menyaring sampai tersisa satu hasil harus
+                meninggalkan kartu itu selebar kolom, bukan melebar sepenuh grid.
+
+                Di ponsel hanya COLLAPSED kartu pertama yang tampil sampai pembaca
+                memintanya; sisanya disembunyikan lewat CSS, jadi layout lebar
+                tidak tersentuh sama sekali.
+              */}
+              <div id="arch-results" className="grid grid-cols-2 gap-[clamp(12px,1.6vw,22px)] min-[521px]:grid-cols-[repeat(auto-fill,minmax(210px,1fr))]">
+                {shown.map((record, i) => (
+                  <RecordCard
+                    key={record.id ?? record.title?.en ?? record.title}
+                    record={record}
+                    className={i >= COLLAPSED && (expanded ? 'animate-fade-in' : 'max-[760px]:hidden')}
+                  />
+                ))}
+              </div>
+
+              {shown.length > COLLAPSED && (
+                <div className="mt-7 text-center min-[760px]:hidden">
+                  <ButtonOutline ref={moreRef} aria-controls="arch-results" aria-expanded={expanded} onClick={toggleMore}>
+                    {expanded
+                      ? t({ id: 'Lihat lebih sedikit', en: 'See less' })
+                      : `${t({ id: 'Lihat lebih banyak', en: 'See more' })} (${shown.length - COLLAPSED})`}
+                  </ButtonOutline>
+                </div>
+              )}
+            </>
           ) : records.length === 0 ? (
             <div className="rounded-lg border border-dashed border-forest/25 px-5 py-[clamp(50px,7vw,110px)] text-center">
               <p className="mb-3 font-display text-[clamp(1.35rem,2.4vw,2.1rem)] italic text-forest">
@@ -193,12 +227,17 @@ export default function Archive() {
   );
 }
 
-function RecordCard({ record }) {
+function RecordCard({ record, className }) {
   const { t } = useLanguage();
   const catLabel = categoryLabels[record.cat] ?? record.cat;
 
   const card = (
-    <article className="overflow-hidden rounded-lg border border-forest/18 bg-paper transition-[border-color,transform] duration-500 ease-heritage hover:-translate-y-[3px] hover:border-gold/70">
+    <article
+      className={cx(
+        'overflow-hidden rounded-lg border border-forest/18 bg-paper transition-[border-color,transform] duration-500 ease-heritage hover:-translate-y-[3px] hover:border-gold/70',
+        !record.href && className,
+      )}
+    >
       <Frame
         src={record.image}
         label={t({ id: 'Gambar arsip', en: 'Archive image' })}
@@ -225,7 +264,7 @@ function RecordCard({ record }) {
       href={record.href}
       target="_blank"
       rel="noopener noreferrer"
-      className="block rounded-lg no-underline outline-offset-4 focus-visible:outline-2 focus-visible:outline-gold"
+      className={cx('block rounded-lg no-underline outline-offset-4 focus-visible:outline-2 focus-visible:outline-gold', className)}
     >
       {card}
       <span className="sr-only"> {t({ id: '(terbuka di tab baru)', en: '(opens in a new tab)' })}</span>
