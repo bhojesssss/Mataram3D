@@ -77,11 +77,27 @@ const LIGHT_PATH = [
   { beat: 'end',       sun: '#FFC178', sunI: 3.2, amb: '#E2E7DC', ambI: 1.02, fog: '#F1E8D4', fogD: 0.0014, sky: 1.0 },
 ];
 
+/**
+ * How fast the scene catches up with the scroll position, in e-foldings per
+ * second (see CameraRig.damp). This is the smoothing Lenis used to put on the
+ * page scroll — its 1.15s exponential curve was half-way there after ~0.115s,
+ * which is λ ≈ 6. Kept here so a wheel notch still glides instead of stepping
+ * the light and the dancer's pose, now that the page scroll itself is native.
+ */
+const PROGRESS_DAMPING = 6;
+
+/** Material slots that can hold a texture worth uploading ahead of time. */
+const TEXTURE_SLOTS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap'];
+
 export class Scene {
   constructor(canvas) {
     this.canvas = canvas;
     this.clock = new THREE.Clock();
+    // `progress` is what the frame renders; `_targetProgress` is where the
+    // scroll actually is. _tick damps one toward the other.
     this.progress = 0;
+    this._targetProgress = 0;
+    this._disposed = false;
     this._running = false;
     this._frame = null;
     this._shadowTick = 0;
@@ -410,7 +426,29 @@ export class Scene {
   }
 
   setProgress(t) {
-    this.progress = THREE.MathUtils.clamp(t, 0, 1);
+    this._targetProgress = THREE.MathUtils.clamp(t, 0, 1);
+  }
+
+  /**
+   * Pays, while the loader still covers the page, for everything the first
+   * scroll would otherwise pay for mid-gesture: the dancer's download, the
+   * upload of her textures, and a shader program for every material — including
+   * the ones outside the hero shot, which three.js would otherwise compile the
+   * first time the camera turns to face them.
+   */
+  async warmUp() {
+    await this.dancer.loaded;
+    if (this._disposed) return;
+
+    this.dancer.traverse((o) => {
+      for (const material of [].concat(o.material ?? [])) {
+        for (const slot of TEXTURE_SLOTS) {
+          if (material[slot]?.isTexture) this.renderer.initTexture(material[slot]);
+        }
+      }
+    });
+
+    await this.renderer.compileAsync(this.scene, this.camera);
   }
 
   start() {
@@ -439,6 +477,10 @@ export class Scene {
     // Unclamped delta — the adaptor needs the true cost of the frame, including
     // the slow ones, or it would never see the problem it exists to fix.
     this.adaptor.sample(raw);
+
+    this.progress = this.rig.reducedMotion
+      ? this._targetProgress
+      : CameraRig.damp(this.progress, this._targetProgress, PROGRESS_DAMPING, dt);
 
     // No shadow-map refresh here, deliberately.
     //
@@ -490,6 +532,7 @@ export class Scene {
   }
 
   dispose() {
+    this._disposed = true;
     this.stop();
     window.removeEventListener('resize', this._onResize);
     document.removeEventListener('visibilitychange', this._onVisibility);

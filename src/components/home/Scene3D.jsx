@@ -45,6 +45,11 @@ export default function Scene3D({ onReady }) {
       await Promise.all([
         withTimeout(document.fonts?.ready ?? Promise.resolve(), 2500),
         withTimeout(framesRendered(2), 2500),
+        // Model penari diunduh, teksturnya diunggah, dan semua shader dikompilasi
+        // selagi tirai asap masih menutup layar — bukan di tengah scroll pertama
+        // pembaca. Dibatasi 5 detik: di koneksi lambat tirainya tetap dibuka dan
+        // sisanya menyusul; scroll native tidak ikut tertahan olehnya.
+        withTimeout(scene.warmUp().catch(() => {}), 5000),
       ]);
       if (cancelled) return;
 

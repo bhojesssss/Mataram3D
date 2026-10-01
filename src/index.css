@@ -143,7 +143,10 @@
 
 @layer base {
   html {
-    /* Lenis yang menggerakkan scroll; smooth-scroll native akan berkelahi. */
+    /*
+      auto, bukan smooth: scrollTo(0, 0) saat pindah halaman harus instan.
+      Geseran halus untuk tautan hash diminta eksplisit lewat scrollBus.
+    */
     scroll-behavior: auto;
     -webkit-text-size-adjust: 100%;
   }
