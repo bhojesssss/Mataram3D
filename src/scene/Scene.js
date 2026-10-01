@@ -147,6 +147,10 @@ export class Scene {
     this.tier = detectTier(this.renderer);
     this.renderScale = 1;
     this.adaptor = new ResolutionAdaptor({
+      // Under a frame cap every frame takes at least the cap's interval; judged
+      // against 60fps the adaptor would read that as struggling and shed
+      // resolution the machine doesn't need to lose.
+      target: this.tier.maxFps ? 1000 / this.tier.maxFps : 16.7,
       onChange: (scale, median) => {
         this.renderScale = scale;
         this._applyResolution();
@@ -164,7 +168,7 @@ export class Scene {
     // courtyard and pale sky clip together into one flat field.
     this.renderer.toneMappingExposure = 0.92;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = this.tier.softShadows ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     // Shadows are refreshed on a cadence rather than every frame. The sun never
     // moves and the architecture never moves, so re-rendering the whole map from
     // ~200 casters at 60Hz was costing more than the entire rest of the frame.
@@ -178,12 +182,8 @@ export class Scene {
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.FogExp2(new THREE.Color(sceneColors.skyLow), 0.0032);
 
-    this.camera = new THREE.PerspectiveCamera(
-      48,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      2000,
-    );
+    const [w, h] = this._viewport();
+    this.camera = new THREE.PerspectiveCamera(48, w / h, 0.1, 2000);
     // Matches CAMERA_KEYS[0] so the very first frame is already the hero pose.
     this.camera.position.set(0, 7.0, 66);
   }
@@ -342,8 +342,7 @@ export class Scene {
    * frame time.
    */
   _applyResolution() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const [w, h] = this._viewport();
     const ratio = pixelRatioFor(this.tier, w, h, this.renderScale);
 
     this.renderer.setPixelRatio(ratio);
@@ -359,6 +358,22 @@ export class Scene {
     this.particles?.onResize(ratio);
   }
 
+  /**
+   * The canvas's CSS size, which is what the drawing buffer is fitted to.
+   *
+   * Read from the canvas rather than the window because the two differ on
+   * phones, and the difference is the point: the canvas is sized to the large
+   * viewport (100vh), so it stays put while the browser toolbar slides in and
+   * out with the scroll. window.innerHeight changes on every slide, and
+   * following it meant reallocating every render target mid-gesture.
+   */
+  _viewport() {
+    return [
+      this.canvas.clientWidth || window.innerWidth,
+      this.canvas.clientHeight || window.innerHeight,
+    ];
+  }
+
   _initContent() {
     this.environment = new Environment(this.tier);
     this.scene.add(this.environment);
@@ -372,9 +387,8 @@ export class Scene {
     this.dancer = new Dancer();
     this.dancer.position.set(0, 1.2, 0);
     this.scene.add(this.dancer);
-    window.__scene = this; // TEMP: screenshot hook, remove
 
-    this.particles = new Particles(900);
+    this.particles = new Particles(this.tier.particles);
     this.scene.add(this.particles);
   }
 
@@ -455,8 +469,14 @@ export class Scene {
     if (this._running) return;
     this._running = true;
     this.clock.start();
-    const loop = () => {
+    // A couple of ms of slack: rAF timestamps jitter, and a strict comparison
+    // would skip a frame that came in a hair early and drop 30fps to 20.
+    const minInterval = this.tier.maxFps ? 1000 / this.tier.maxFps - 2 : 0;
+    let last = -Infinity;
+    const loop = (now) => {
       this._frame = requestAnimationFrame(loop);
+      if (now - last < minInterval) return;
+      last = now;
       this._tick();
     };
     this._frame = requestAnimationFrame(loop);
@@ -520,7 +540,13 @@ export class Scene {
   }
 
   _onResize() {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    // On a phone most resize events are the toolbar, which leaves the canvas
+    // untouched (see _viewport). Nothing to reallocate for those.
+    const [w, h] = this._viewport();
+    if (w === this._size?.[0] && h === this._size?.[1]) return;
+    this._size = [w, h];
+
+    this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this._applyResolution();
   }

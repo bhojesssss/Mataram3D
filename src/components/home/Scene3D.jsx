@@ -91,8 +91,16 @@ export default function Scene3D({ onReady }) {
     render hanya di sepanjang rentang baca; lihat components/ui/Band.jsx.
   */
   return (
-    /* Pendopo 3D. Fixed di belakang segalanya; seluruh isi halaman menggulir di atasnya. */
-    <canvas ref={canvasRef} id="scene" aria-hidden="true" className="fixed inset-0 z-0 block h-full w-full" />
+    /*
+      Pendopo 3D. Fixed di belakang segalanya; seluruh isi halaman menggulir di atasnya.
+
+      h-screen (100vh), bukan inset-0. Di ponsel 100vh adalah viewport besar —
+      tinggi layar saat toolbar browser tersembunyi — jadi ukuran canvas tidak
+      ikut berubah tiap kali toolbar naik-turun saat digulir. Dengan inset-0
+      canvas mengikuti toolbar, dan tiap perubahan itu memaksa Scene
+      mengalokasi ulang seluruh render target-nya di tengah gestur scroll.
+    */
+    <canvas ref={canvasRef} id="scene" aria-hidden="true" className="fixed inset-x-0 top-0 z-0 block h-screen w-full" />
   );
 }
 
