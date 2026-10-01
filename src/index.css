@@ -143,10 +143,7 @@
 
 @layer base {
   html {
-    /*
-      auto, bukan smooth: scrollTo(0, 0) saat pindah halaman harus instan.
-      Geseran halus untuk tautan hash diminta eksplisit lewat scrollBus.
-    */
+    /* Lenis yang menggerakkan scroll; smooth-scroll native akan berkelahi. */
     scroll-behavior: auto;
     -webkit-text-size-adjust: 100%;
   }
@@ -161,16 +158,10 @@
     Digerbangi .has-js: kalau scene 3D gagal boot, kelasnya dilepas dan
     seluruh isi halaman tetap terbaca alih-alih blank.
   */
-  /*
-    Sengaja TANPA will-change. Di sini ia menjadikan ±37 elemen layer GPU
-    permanen — sebelum, selama, dan selamanya setelah animasinya selesai — dan
-    di ponsel kelas menengah layer sebanyak itu di atas canvas 3D ikut menahan
-    scroll. GSAP sudah mempromosikan elemennya sendiri selama tween berjalan
-    (force3D: 'auto') lalu melepasnya begitu selesai.
-  */
   .has-js [data-reveal] {
     opacity: 0;
     transform: translateY(26px);
+    will-change: opacity, transform;
   }
 
   @media (prefers-reduced-motion: reduce) {

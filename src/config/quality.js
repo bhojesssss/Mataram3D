@@ -30,11 +30,7 @@ export const TIERS = {
     gtao: true,
     gtaoSamples: 16,
     shadowMap: 4096,
-    softShadows: true,
     treeDetailBias: 0,
-    particles: 900,
-    /** Frame-rate ceiling; 0 renders on every display refresh. */
-    maxFps: 0,
   },
   medium: {
     name: 'medium',
@@ -44,10 +40,7 @@ export const TIERS = {
     gtao: true,
     gtaoSamples: 8,
     shadowMap: 2048,
-    softShadows: true,
     treeDetailBias: 0,
-    particles: 900,
-    maxFps: 0,
   },
   low: {
     name: 'low',
@@ -59,38 +52,8 @@ export const TIERS = {
     gtao: false,
     gtaoSamples: 0,
     shadowMap: 1024,
-    softShadows: true,
     // One LOD step down on every tree ring.
     treeDetailBias: -1,
-    particles: 900,
-    maxFps: 0,
-  },
-  /**
-   * Phones and tablets. Below `low`, not beside it: a mid-range phone GPU has a
-   * fraction of an integrated laptop's fill rate, while its screen asks for more
-   * pixels than the laptop's does. And on a phone the GPU is not the scene's
-   * alone — the browser composites the page scroll on the same chip, so a scene
-   * that saturates it doesn't just drop its own frames, it freezes the scroll.
-   */
-  mobile: {
-    name: 'mobile',
-    // ~1 device pixel per CSS pixel on a typical 412×915 phone viewport.
-    maxPixels: 0.45e6,
-    maxPixelRatio: 1,
-    msaa: 0,
-    gtao: false,
-    gtaoSamples: 0,
-    shadowMap: 1024,
-    // PCFSoft samples the shadow map many times per fragment, on every lit
-    // fragment, every frame. Plain PCF is a fraction of that and at this
-    // resolution the edge difference doesn't survive.
-    softShadows: false,
-    treeDetailBias: -1,
-    // Additive sprites are pure overdraw; half as many still reads as dust.
-    particles: 450,
-    // 30fps leaves the other half of every frame to the compositor, which is
-    // what keeps the page scroll moving under the scene.
-    maxFps: 30,
   },
 };
 
@@ -109,12 +72,6 @@ const SOFTWARE = /llvmpipe|swiftshader|softwarerasterizer|microsoft basic/i;
 export function detectTier(renderer) {
   const forced = new URLSearchParams(location.search).get('q');
   if (forced && TIERS[forced]) return TIERS[forced];
-
-  // Before the GPU sniff, which cannot tell a phone from a laptop: an Adreno or
-  // Mali phone has 8 cores and so read as a "wide integrated" laptop and got
-  // `medium` — AO and MSAA on a phone GPU — and an iPhone reports only
-  // "Apple GPU", matched nothing, and got `high`.
-  if (isHandheld()) return TIERS.mobile;
 
   let gpu = '';
   try {
@@ -138,17 +95,6 @@ export function detectTier(renderer) {
   // machine that can't hold it is a much worse first impression than the reverse,
   // and the adaptor below will promote it within a couple of seconds if it can.
   return gpu ? TIERS.high : TIERS.medium;
-}
-
-/** Phone or tablet, including the ones that pretend otherwise. */
-function isHandheld() {
-  if (navigator.userAgentData?.mobile) return true;
-  const ua = navigator.userAgent || '';
-  if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return true;
-  // iPadOS Safari sends a desktop Mac user agent; only the touch points give it away.
-  if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return true;
-  // "Request desktop site" swaps the UA too, but the primary pointer is still a finger.
-  return window.matchMedia?.('(pointer: coarse)').matches ?? false;
 }
 
 /**
