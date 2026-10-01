@@ -17,7 +17,14 @@ const SHELL =
   'fixed inset-x-0 top-0 z-20 grid grid-cols-[1fr_auto_1fr] items-center gap-8 border-b px-[clamp(20px,4vw,52px)] ' +
   'transition-[background-color,backdrop-filter,border-color,padding] duration-500 ease-heritage';
 
-const SOLID = 'border-forest/12 bg-paper/86 backdrop-blur-[14px]';
+/*
+  Di layar sentuh blur-nya diganti latar yang lebih pekat. Di homepage navbar
+  ini duduk di atas canvas 3D yang menggambar ulang tiap frame, jadi blur-nya
+  ikut dihitung ulang tiap frame — dan di ponsel ber-DPR tinggi radius 14px
+  jadi ±37 piksel perangkat, mahal untuk GPU yang sama yang menggulir halaman.
+*/
+const SOLID =
+  'border-forest/12 bg-paper/86 backdrop-blur-[14px] pointer-coarse:bg-paper/95 pointer-coarse:backdrop-blur-none';
 
 /*
   Menu sebaris butuh ±960px dan baru benar-benar di tengah mulai 1100px —
