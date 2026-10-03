@@ -5,7 +5,7 @@ import { scrollToHash } from '@/scroll/scrollBus';
  * Tautan ke sebuah section di homepage, mis. <HashLink hash="#culture">.
  *
  * Kalau pembaca sudah di homepage, tidak ada navigasi sama sekali — cukup
- * digeser lewat Lenis supaya smoothing 3D-nya tidak dilangkahi. Dari halaman
+ * digeser dengan scroll halus, dan kamera 3D mengikutinya. Dari halaman
  * dalam, router pindah ke "/" dan SiteLayout yang menggeser setelah homepage
  * benar-benar terpasang.
  */

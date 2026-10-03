@@ -15,7 +15,7 @@ import { PendopoArt, TumpangSariArt } from './Ornaments';
  *  - tumpang sari di belakang section Palace, muncul saat Band pertama
  *    memudar di sana, seperti kamera 3D yang masuk ke bawah atap.
  *
- * ScrollController tetap dipasang (reveal, Lenis, progres untuk navbar). Yang
+ * ScrollController tetap dipasang (reveal dan progres untuk navbar). Yang
  * ia gerakkan di sini bukan kamera, tapi opacity dua lapis itu — properti
  * yang hanya disusun ulang oleh compositor, tanpa menggambar ulang apa pun.
  */

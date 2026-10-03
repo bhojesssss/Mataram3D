@@ -61,6 +61,15 @@ const AMBIENT_SCALE = 0.26;
 const SUNBEAM_SCALE = 0.5;
 
 /**
+ * How fast the scene catches up with the scroll position, in e-foldings per
+ * second (see CameraRig.damp). This is the smoothing Lenis used to put on the
+ * page scroll — its 1.15s exponential curve was half-way there after ~0.115s,
+ * which is λ ≈ 6. Kept here so a wheel notch still glides instead of stepping
+ * the light and the dancer's pose, now that the page scroll itself is native.
+ */
+const PROGRESS_DAMPING = 6;
+
+/**
  * Sun/ambient state at each beat, interpolated per frame. Timings come from the
  * resolved beat table via `retime`, same as the camera path.
  */
@@ -85,7 +94,10 @@ export class Scene {
   constructor(canvas) {
     this.canvas = canvas;
     this.clock = new THREE.Clock();
+    // `progress` is what the frame renders; `_targetProgress` is where the
+    // scroll actually is. _tick damps one toward the other.
     this.progress = 0;
+    this._targetProgress = 0;
     this._running = false;
     this._frame = null;
     this._shadowTick = 0;
@@ -438,7 +450,7 @@ export class Scene {
   }
 
   setProgress(t) {
-    this.progress = THREE.MathUtils.clamp(t, 0, 1);
+    this._targetProgress = THREE.MathUtils.clamp(t, 0, 1);
   }
 
   start() {
@@ -467,6 +479,10 @@ export class Scene {
     // Unclamped delta — the adaptor needs the true cost of the frame, including
     // the slow ones, or it would never see the problem it exists to fix.
     this.adaptor.sample(raw);
+
+    this.progress = this.rig.reducedMotion
+      ? this._targetProgress
+      : CameraRig.damp(this.progress, this._targetProgress, PROGRESS_DAMPING, dt);
 
     // No shadow-map refresh here, deliberately.
     //
