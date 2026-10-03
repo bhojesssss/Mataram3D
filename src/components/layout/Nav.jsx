@@ -12,9 +12,17 @@ import { LanguageSwitch } from '@/components/ui/LanguageSwitch';
   brand yang lebar di kiri mendorong menu keluar dari titik tengah sebesar
   selisihnya terhadap kelompok ikon yang sempit. Rel 1fr di kedua sisi menaruh
   menu tepat di tengah berapa pun lebar brand-nya.
+
+  Di bawah 1100px menu tengahnya hilang, jadi gridnya turun ke dua kolom.
+  Tiga kolom di situ masih membawa dua gap-8 di kiri-kanan kolom kosong, dan
+  dengan brand 177px + ikon 148px isinya butuh ±425px — lebih lebar dari
+  layar ponsel mana pun, sehingga hamburger terdorong keluar layar. Kolom
+  brand minmax(0,1fr) supaya kalau masih kurang, brand yang mengalah, bukan
+  tombol menunya.
 */
 const SHELL =
   'fixed inset-x-0 top-0 z-20 grid grid-cols-[1fr_auto_1fr] items-center gap-8 border-b px-[clamp(20px,4vw,52px)] ' +
+  'max-[1100px]:grid-cols-[minmax(0,1fr)_auto] max-[1100px]:gap-3 ' +
   'transition-[background-color,backdrop-filter,border-color,padding] duration-500 ease-heritage';
 
 const SOLID = 'border-forest/12 bg-paper/86 backdrop-blur-[14px]';
@@ -54,7 +62,12 @@ export function Nav({ variant = 'page', menuOpen = false, onOpenMenu }) {
     >
       <Link
         to="/"
-        className="col-start-1 inline-flex items-center gap-2.5 justify-self-start font-display text-[1.18rem] font-medium tracking-[0.34em] indent-[0.34em] whitespace-nowrap text-forest no-underline"
+        className={cx(
+          'col-start-1 inline-flex min-w-0 max-w-full items-center gap-2.5 justify-self-start overflow-hidden font-display text-[1.18rem] font-medium tracking-[0.34em] indent-[0.34em] whitespace-nowrap text-forest no-underline',
+          // Ponsel: tracking selebar 0.34em saja sudah ±50px — dirapatkan supaya muat di samping ikon.
+          'max-[420px]:gap-2 max-[420px]:text-[1rem] max-[420px]:tracking-[0.22em] max-[420px]:indent-[0.22em]',
+          'max-[350px]:text-[0.9rem] max-[350px]:tracking-[0.16em] max-[350px]:indent-[0.16em]',
+        )}
       >
         <span className="text-gold">
           <Rosette />
@@ -84,7 +97,7 @@ export function Nav({ variant = 'page', menuOpen = false, onOpenMenu }) {
         ))}
       </nav>
 
-      <div className="col-start-3 flex items-center justify-self-end gap-2">
+      <div className="col-start-3 flex items-center justify-self-end gap-2 max-[1100px]:col-start-2">
         <LanguageSwitch />
         <Link to="/archive" aria-label={t({ id: 'Cari di arsip', en: 'Search the archive' })} className={ICON}>
           <SearchIcon />
