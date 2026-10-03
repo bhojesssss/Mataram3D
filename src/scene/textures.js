@@ -500,6 +500,89 @@ export function earthMaps() {
 }
 
 /**
+ * Grass for the land outside the compound wall.
+ *
+ * Swept sand is right *inside* a keraton wall — the courtyards really are sand —
+ * but it was also carried out to the horizon, and from the compound and horizon
+ * beats the whole lower half of the frame read as desert. Outside the wall is
+ * alun-alun and field: grass, in the moodboard's sage rather than a lawn green.
+ *
+ * Two scales: broad drifts of lush and sun-dried grass, low frequency so the
+ * tile doesn't repeat visibly at distance, and fine blade strokes that the
+ * derived normal map turns into a stipple of relief up close.
+ */
+export function grassMaps() {
+  return pbr('grass', { normalStrength: 1.5, rough: [0.82, 1.0] }, () => {
+    const S = 1024;
+    const c = canvas(S);
+    const g = c.getContext('2d');
+    g.fillStyle = '#7E9070';
+    g.fillRect(0, 0, S, S);
+
+    // Drawn with wrap-around copies near the edges so the tile seams cleanly.
+    const wrapped = (x, y, reach, draw) => {
+      for (const dx of [-S, 0, S]) {
+        for (const dy of [-S, 0, S]) {
+          if (dx !== 0 && x > reach && x < S - reach) continue;
+          if (dy !== 0 && y > reach && y < S - reach) continue;
+          draw(x + dx, y + dy);
+        }
+      }
+    };
+
+    for (let i = 0; i < 120; i++) {
+      const x = Math.random() * S;
+      const y = Math.random() * S;
+      const r = 60 + Math.random() * 190;
+      const roll = Math.random();
+      const tone =
+        roll > 0.62
+          ? 'rgba(48, 74, 48, 0.3)' // lush, in the shade of the trees
+          : roll > 0.3
+            ? 'rgba(178, 172, 122, 0.26)' // sun-dried
+            : 'rgba(110, 132, 92, 0.24)';
+      wrapped(x, y, r, (px, py) => {
+        const grad = g.createRadialGradient(px, py, 0, px, py, r);
+        grad.addColorStop(0, tone);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = grad;
+        g.fillRect(px - r, py - r, r * 2, r * 2);
+      });
+    }
+
+    // Blades, batched into one path per tone — 24k separate strokes would cost
+    // a noticeable chunk of startup.
+    const tones = [
+      'rgba(40, 62, 40, 0.5)',
+      'rgba(76, 102, 66, 0.5)',
+      'rgba(150, 166, 116, 0.45)',
+      'rgba(196, 190, 140, 0.35)',
+    ];
+    g.lineCap = 'round';
+    for (let k = 0; k < tones.length; k++) {
+      g.strokeStyle = tones[k];
+      g.lineWidth = k < 2 ? 1.6 : 1.2;
+      g.beginPath();
+      for (let i = 0; i < 6000; i++) {
+        const x = Math.random() * S;
+        const y = Math.random() * S;
+        const len = 3 + Math.random() * 7;
+        const a = Math.random() * Math.PI * 2;
+        const ex = Math.cos(a) * len;
+        const ey = Math.sin(a) * len;
+        wrapped(x, y, 12, (px, py) => {
+          g.moveTo(px, py);
+          g.lineTo(px + ex, py + ey);
+        });
+      }
+      g.stroke();
+    }
+
+    return c;
+  });
+}
+
+/**
  * Pendopo floor — polished tile laid on the diagonal with a diamond inlay.
  *
  * Read through the gaps between columns from every beat outside, and underfoot
@@ -764,7 +847,7 @@ export function fabricMaps() {
   });
 }
 
-/** Soft radial alpha — dust motes and the god-ray billboards. */
+/** Soft radial alpha — the drifting mist bands. */
 export function glowTexture() {
   return memo('glow', () => {
     const c = canvas(128);

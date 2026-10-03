@@ -20,17 +20,34 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+/*
+ * Phones no longer run the scene at all (see deviceClass), so these tiers only
+ * have to cover desktops, laptops and tablets — and can spend accordingly.
+ *
+ * Two settings here cost almost nothing per frame and are set generously on every
+ * tier: the shadow map is rendered once at startup (see Scene: autoUpdate is off),
+ * so its size is memory, not frame time; and `gtaoScale` buys AO back cheaply —
+ * GTAO re-renders the whole scene for its normals, and measured on an Iris Xe it
+ * was half the frame (45ms → 22ms without it). At half resolution it costs ~8ms
+ * less and, through its own denoise, reads the same.
+ */
 export const TIERS = {
   high: {
     name: 'high',
     /** Ceiling on drawing-buffer pixels, before the dynamic scale is applied. */
-    maxPixels: 3.3e6,
+    maxPixels: 5.0e6,
     maxPixelRatio: 2,
     msaa: 4,
     gtao: true,
     gtaoSamples: 16,
+    /** GTAO's internal resolution as a fraction of the drawing buffer's. */
+    gtaoScale: 1,
     shadowMap: 4096,
+    /** Glow on the gilt and around the sun. Needs the post chain (gtao). */
+    bloom: true,
     treeDetailBias: 0,
+    /** Multiplier on tree and undergrowth counts outside the wall. */
+    vegetation: 1,
   },
   medium: {
     name: 'medium',
@@ -39,8 +56,14 @@ export const TIERS = {
     msaa: 2,
     gtao: true,
     gtaoSamples: 8,
-    shadowMap: 2048,
+    gtaoScale: 0.5,
+    shadowMap: 4096,
+    // Off here: measured on an Iris Xe it was the single dearest addition
+    // (~3.5ms of a ~50ms full-resolution frame), and the sunbeams and clouds
+    // carry the atmosphere without it.
+    bloom: false,
     treeDetailBias: 0,
+    vegetation: 1,
   },
   low: {
     name: 'low',
@@ -51,9 +74,12 @@ export const TIERS = {
     // normal maps still carry most of the surface detail without it.
     gtao: false,
     gtaoSamples: 0,
-    shadowMap: 1024,
+    gtaoScale: 0.5,
+    shadowMap: 2048,
+    bloom: false,
     // One LOD step down on every tree ring.
     treeDetailBias: -1,
+    vegetation: 0.6,
   },
 };
 
@@ -72,6 +98,11 @@ const SOFTWARE = /llvmpipe|swiftshader|softwarerasterizer|microsoft basic/i;
 export function detectTier(renderer) {
   const forced = new URLSearchParams(location.search).get('q');
   if (forced && TIERS[forced]) return TIERS[forced];
+
+  // Before the GPU sniff, which can't tell a tablet from a laptop: an iPad
+  // reports only "Apple GPU", matches nothing below, and would land on high.
+  // A tablet's GPU also composites the page scroll, so it gets at most medium.
+  if (deviceClass() === 'tablet') return TIERS.medium;
 
   let gpu = '';
   try {
@@ -95,6 +126,36 @@ export function detectTier(renderer) {
   // machine that can't hold it is a much worse first impression than the reverse,
   // and the adaptor below will promote it within a couple of seconds if it can.
   return gpu ? TIERS.high : TIERS.medium;
+}
+
+/**
+ * 'phone' | 'tablet' | 'desktop'.
+ *
+ * Phones get no 3D at all — the homepage shows a plain background instead
+ * (see HomeBackdrop). Even at the lowest settings a phone GPU couldn't
+ * hold the scene and the page scroll at once, and the scroll is what the reader
+ * actually feels.
+ *
+ * The split is the screen's short side, not the user agent: both phones and
+ * tablets say "Mobile" in places, but no phone is 600 CSS px across in either
+ * orientation and every tablet is. `?device=phone|tablet|desktop` overrides it,
+ * for checking the phone page from a desktop browser and vice versa.
+ */
+export function deviceClass() {
+  const forced = new URLSearchParams(location.search).get('device');
+  if (forced === 'phone' || forced === 'tablet' || forced === 'desktop') return forced;
+
+  const ua = navigator.userAgent || '';
+  const handheld =
+    navigator.userAgentData?.mobile ||
+    /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
+    // iPadOS Safari sends a desktop Mac user agent; only the touch points give it away.
+    (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ||
+    // "Request desktop site" swaps the UA too, but the primary pointer is still a finger.
+    (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+
+  if (!handheld) return 'desktop';
+  return Math.min(screen.width, screen.height) < 600 ? 'phone' : 'tablet';
 }
 
 /**

@@ -4,6 +4,7 @@ import {
   glowTexture,
   courtyardMaps,
   earthMaps,
+  grassMaps,
   stoneMaps,
   timberMaps,
   foliageMaps,
@@ -40,6 +41,18 @@ function mulberry32(seed) {
 }
 
 /**
+ * The planted row inside the compound wall: down both sides and across the
+ * back, ~6.5 units in from the wall. The front run is left empty — it is the
+ * camera's way in, and the gate wants to read from the hero shot.
+ */
+function groveSpots() {
+  const spots = [];
+  for (const z of [-42, -31, -20, -9, 2, 13, 24]) spots.push([-45.5, z], [45.5, z]);
+  for (const x of [-33, -22, -11, 0, 11, 22, 33]) spots.push([x, -45.5]);
+  return spots;
+}
+
+/**
  * Draws a mountain profile into an alpha canvas.
  *
  * Earlier version summed random sines, which at low frequency produced one huge
@@ -58,8 +71,10 @@ function mulberry32(seed) {
  * @param {number} foothill  amplitude of the rolling hills under the cones
  * @param {number} rough     amplitude of fine surface relief (kept smooth — it is
  *        interpolated value noise, not per-pixel jitter, so no sawtooth)
+ * @param {number} relief    0–1 strength of the painted shading inside the
+ *        silhouette (see below); less on the farther layers, which haze flattens
  */
-function ridgeTexture(seed, cones, base, foothill, rough) {
+function ridgeTexture(seed, cones, base, foothill, rough, relief = 0) {
   const w = 2048;
   const h = 512;
   const c = document.createElement('canvas');
@@ -85,6 +100,7 @@ function ridgeTexture(seed, cones, base, foothill, rough) {
   g.beginPath();
   g.moveTo(0, h);
 
+  const tops = [];
   for (let x = 0; x <= w; x += 2) {
     const t = x / w;
     // Rolling foothills form the floor of the range…
@@ -96,12 +112,88 @@ function ridgeTexture(seed, cones, base, foothill, rough) {
       if (d < 1) up = Math.max(up, Math.min(Math.pow(1 - d, 1.55), 0.96) * p.h);
     }
     up += (noiseAt(fine, t) - 0.5) * rough;
-    g.lineTo(x, h * (base - up));
+    const y = h * (base - up);
+    tops.push(y);
+    g.lineTo(x, y);
   }
 
   g.lineTo(w, h);
   g.closePath();
   g.fill();
+
+  // Relief, painted inside the silhouette only — `source-atop` keeps the alpha.
+  // The material colour multiplies this, so white is fully lit and grey is shade.
+  // Without it every range was one flat cut-out, a stage flat rather than a
+  // mountain, however good its profile.
+  if (relief > 0) {
+    g.globalCompositeOperation = 'source-atop';
+
+    // Barren grey-brown summits over greener, darker forested slopes.
+    const band = g.createLinearGradient(0, 0, 0, h);
+    band.addColorStop(0, `rgba(236, 228, 214, ${0.5 * relief})`);
+    band.addColorStop(base * 0.7, 'rgba(236, 228, 214, 0)');
+    band.addColorStop(base, `rgba(70, 92, 66, ${0.4 * relief})`);
+    band.addColorStop(1, `rgba(70, 92, 66, ${0.4 * relief})`);
+    g.fillStyle = band;
+    g.fillRect(0, 0, w, h);
+
+    // Flank shading. The sun stands to the left (SUN_DIR.x < 0), so a slope
+    // rising to the right faces it and stays lit; one falling to the right
+    // turns away into shade. Canvas y grows downward, hence the sign.
+    //
+    // The slope is averaged over ~50px either side: per-column it switched
+    // from lit to shade in one step at every summit and every cone foot, and
+    // each switch showed as a hard vertical line down the mountain.
+    const slopes = tops.map((y, i) => (i ? (y - tops[i - 1]) / 2 : 0));
+    const R = 24;
+    for (let i = 1; i < tops.length; i++) {
+      let sum = 0;
+      let n = 0;
+      for (let j = Math.max(1, i - R); j <= Math.min(tops.length - 1, i + R); j++) {
+        sum += slopes[j];
+        n++;
+      }
+      const shade = Math.min(Math.max((sum / n) * 0.9, 0), 1) * 0.42 * relief;
+      if (shade < 0.01) continue;
+      g.fillStyle = `rgba(52, 62, 58, ${shade})`;
+      // Start above the ridge line: source-atop clips to the silhouette's own
+      // antialiased edge, where starting exactly on it left a 2px stair-step.
+      g.fillRect(i * 2 - 2, tops[i] - 6, 2, h - tops[i] + 6);
+    }
+
+    // Erosion gullies down the cones — the barranco lines that make a
+    // stratovolcano read as one. Short, wandering, and faint: full-length
+    // straight strokes from the summit fanned out like the poles of a tent.
+    g.lineCap = 'round';
+    for (const p of cones) {
+      const cx = p.u * w;
+      const top = h * (base - 0.96 * p.h); // the truncated summit, as above
+      const foot = h * base;
+      for (let k = 0; k < 16; k++) {
+        const side = rnd() * 2 - 1;
+        // Start a little way down the flank, run a third to two thirds of it.
+        const f0 = 0.12 + rnd() * 0.25;
+        const f1 = Math.min(f0 + 0.3 + rnd() * 0.35, 0.95);
+        const yAt = (f) => top + (foot - top) * f;
+        const xAt = (f) => cx + side * p.w * w * Math.pow(f, 0.8) * 0.92;
+        g.strokeStyle =
+          side > 0
+            ? `rgba(40, 50, 46, ${(0.05 + rnd() * 0.07) * relief})`
+            : `rgba(250, 244, 230, ${(0.05 + rnd() * 0.06) * relief})`;
+        g.lineWidth = 1 + rnd() * 1.6;
+        g.beginPath();
+        g.moveTo(xAt(f0), yAt(f0));
+        // A few jittered segments rather than one smooth curve.
+        for (let s = 1; s <= 5; s++) {
+          const f = f0 + ((f1 - f0) * s) / 5;
+          g.lineTo(xAt(f) + (rnd() - 0.5) * 9, yAt(f));
+        }
+        g.stroke();
+      }
+    }
+
+    g.globalCompositeOperation = 'source-over';
+  }
 
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -118,9 +210,16 @@ const SKY_VERT = /* glsl */ `
 `;
 
 /**
- * Three-stop vertical gradient plus a directional warm bloom around the sun. The
- * bloom is what sells the "golden hour" read at the later scroll beats — uniforms
- * are driven from Scene.js as the light shifts.
+ * Three-stop vertical gradient, a drifting cloud layer, and a directional warm
+ * bloom around the sun. The bloom is what sells the "golden hour" read at the
+ * later scroll beats — uniforms are driven from Scene.js as the light shifts.
+ *
+ * The clouds are fbm noise projected onto a flat plane overhead (dividing by
+ * dir.y), which gives them real perspective: large and soft overhead, packed
+ * into thin streaks toward the horizon, where they then fade into the haze.
+ * They are lit from the sun's side of the sky and greyed underneath, so they
+ * read as volume, and they drift on uTime slowly enough to notice only on a
+ * long look. Computed per sky pixel, but only above the horizon.
  */
 const SKY_FRAG = /* glsl */ `
   varying vec3 vWorld;
@@ -129,6 +228,32 @@ const SKY_FRAG = /* glsl */ `
   uniform vec3 uHigh;
   uniform vec3 uSunDir;
   uniform float uSunStrength;
+  uniform float uTime;
+  uniform float uCloud;
+
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
+  float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash(i);
+    float b = hash(i + vec2(1.0, 0.0));
+    float c = hash(i + vec2(0.0, 1.0));
+    float d = hash(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  }
+  float fbm(vec2 p) {
+    float v = 0.0;
+    float a = 0.5;
+    for (int i = 0; i < 5; i++) {
+      v += a * noise(p);
+      p = p * 2.03 + vec2(17.0, 9.0);
+      a *= 0.5;
+    }
+    return v;
+  }
 
   void main() {
     vec3 dir = normalize(vWorld);
@@ -137,7 +262,24 @@ const SKY_FRAG = /* glsl */ `
     vec3 col = mix(uLow, uMid, smoothstep(0.42, 0.56, h));
     col = mix(col, uHigh, smoothstep(0.55, 0.9, h));
 
-    float sun = max(dot(dir, normalize(uSunDir)), 0.0);
+    vec3 toSun = normalize(uSunDir);
+    float sun = max(dot(dir, toSun), 0.0);
+
+    if (dir.y > 0.0 && uCloud > 0.0) {
+      vec2 uv = dir.xz / (dir.y + 0.12) * 3.2 + vec2(uTime * 0.01, uTime * 0.004);
+      float n = fbm(uv);
+      float cover = smoothstep(0.44, 0.72, n) * smoothstep(0.015, 0.2, dir.y);
+
+      // Underside shade from a second, offset sample: thicker cloud is darker.
+      float thick = smoothstep(0.55, 0.95, fbm(uv * 1.6 + vec2(3.1, 7.7)));
+      vec3 lit = mix(vec3(0.97, 0.95, 0.9), vec3(1.0, 0.92, 0.78), pow(sun, 3.0));
+      vec3 cloud = mix(lit, col * 0.84, thick * 0.55);
+      // Silver lining toward the sun.
+      cloud += pow(sun, 12.0) * 0.35 * vec3(1.0, 0.9, 0.7) * (1.0 - thick);
+
+      col = mix(col, cloud, cover * uCloud);
+    }
+
     col += uSunStrength * pow(sun, 7.0) * vec3(1.0, 0.86, 0.62);
     col += uSunStrength * 0.28 * pow(sun, 2.0) * vec3(1.0, 0.9, 0.74);
 
@@ -159,6 +301,7 @@ export class Environment extends THREE.Group {
     this._buildFence();
     this._buildRidges();
     this._buildTrees();
+    this._buildShrubs();
     this._buildForeground();
     this._buildMist();
   }
@@ -178,6 +321,8 @@ export class Environment extends THREE.Group {
       // this value only matters if the sky is ever used standalone.
       uSunDir: { value: new THREE.Vector3(-0.42, 0.38, -0.93).normalize() },
       uSunStrength: { value: 0.55 },
+      uTime: { value: 0 },
+      uCloud: { value: 0.85 },
     };
     const mat = this._track(
       new THREE.ShaderMaterial({
@@ -207,14 +352,19 @@ export class Environment extends THREE.Group {
   _buildGround() {
     const g = new THREE.Group();
 
-    // Swept earth, out to the fog.
+    // Swept sand inside the compound wall — keraton courtyards really are sand —
+    // and grass beyond it, out to the fog. The two meet under the wall with no
+    // overlap: the grass is a disc with the walled square cut out of it, so
+    // there is no coplanar pair left to z-fight at the far beats.
+    const WALL = 52;
     const earth = new THREE.Mesh(
-      this._track(new THREE.CircleGeometry(240, 96)),
+      this._track(new THREE.PlaneGeometry(WALL * 2, WALL * 2)),
       this._track(
         applyMaps(
           new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0 }),
           earthMaps(),
-          22,
+          // Same texel density as when this spanned the 480-wide disc at 22x.
+          (WALL * 2 * 22) / 480,
           0.6,
         ),
       ),
@@ -223,6 +373,34 @@ export class Environment extends THREE.Group {
     earth.position.y = -0.04;
     earth.receiveShadow = true;
     g.add(earth);
+
+    const field = new THREE.Shape();
+    field.absarc(0, 0, 240, 0, Math.PI * 2, false);
+    const hole = new THREE.Path();
+    hole.moveTo(-WALL, -WALL);
+    hole.lineTo(WALL, -WALL);
+    hole.lineTo(WALL, WALL);
+    hole.lineTo(-WALL, WALL);
+    hole.closePath();
+    field.holes.push(hole);
+
+    // ShapeGeometry's UVs are its raw coordinates, so the repeat is 1 / tile size.
+    const GRASS_TILE = 9;
+    const grass = new THREE.Mesh(
+      this._track(new THREE.ShapeGeometry(field, 96)),
+      this._track(
+        applyMaps(
+          new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0 }),
+          grassMaps(),
+          1 / GRASS_TILE,
+          0.9,
+        ),
+      ),
+    );
+    grass.rotation.x = -Math.PI / 2;
+    grass.position.y = -0.04;
+    grass.receiveShadow = true;
+    g.add(grass);
 
     // Paved courtyard. Square, matching the pendopo — a keraton plaza is laid out
     // on the building's axes, not as a circle around it.
@@ -523,19 +701,23 @@ export class Environment extends THREE.Group {
       // Near forested foothills — low, rolling, no cones.
       { z: -170, w: 900, h: 150, y: 14, seed: 11, base: 0.58, foothill: 0.15, rough: 0.022,
         cones: [{ u: 0.72, h: 0.24, w: 0.2 }],
-        tint: sceneColors.forestDeep, mix: 0.4 },
+        tint: sceneColors.forestDeep, mix: 0.4, relief: 1 },
       // Mid ridge — two gentle humps.
       { z: -260, w: 1300, h: 200, y: 26, seed: 27, base: 0.6, foothill: 0.13, rough: 0.016,
         cones: [{ u: 0.2, h: 0.36, w: 0.15 }, { u: 0.84, h: 0.28, w: 0.12 }],
-        tint: palette.forest, mix: 0.62 },
+        tint: palette.forest, mix: 0.58, relief: 0.8 },
       // Far volcano pair — Merapi left of centre, a lower companion to the right.
       { z: -360, w: 1800, h: 230, y: 40, seed: 43, base: 0.62, foothill: 0.09, rough: 0.01,
         cones: [{ u: 0.33, h: 0.5, w: 0.085 }, { u: 0.62, h: 0.34, w: 0.07 }],
-        tint: palette.sage, mix: 0.78 },
+        // mix was 0.78; with the flank shading carrying the form, a little more
+        // of the sage can show without the volcanoes stepping forward.
+        tint: palette.sage, mix: 0.72, relief: 0.6 },
     ];
 
     for (const s of specs) {
-      const tex = this._track(ridgeTexture(s.seed, s.cones, s.base, s.foothill, s.rough));
+      const tex = this._track(
+        ridgeTexture(s.seed, s.cones, s.base, s.foothill, s.rough, s.relief),
+      );
       // Lerping the silhouette toward fog colour is what makes it read as distant.
       const col = new THREE.Color(s.tint).lerp(fogCol, s.mix);
       const mat = this._track(
@@ -687,15 +869,29 @@ export class Environment extends THREE.Group {
       return geoCache.get(key);
     };
 
+    // Counts scale with the tier. Added trees append to a ring rather than
+    // reshuffling it — each tree draws the same seeded numbers in the same order —
+    // so the first 30 of the near ring stand exactly where they always have.
+    const veg = this.tier.vegetation ?? 1;
+
     const rings = [
       // detail = icosahedron subdivision for the leaf clumps. The near ring is what
       // the camera actually passes; the far ring is a few pixels per clump.
-      { count: 30, radius: 56, spread: 14, scale: 0.85, seed: 5, detail: 2, mix: 0.1,
+      { count: 38, radius: 56, spread: 14, scale: 0.85, seed: 5, detail: 2, mix: 0.1,
         weights: { waringin: 0.5, tall: 0.2, low: 0.3 } },
-      { count: 44, radius: 96, spread: 26, scale: 1.3, seed: 91, detail: 1, mix: 0.34,
+      { count: 60, radius: 96, spread: 26, scale: 1.3, seed: 91, detail: 1, mix: 0.34,
         weights: { waringin: 0.45, tall: 0.4, low: 0.15 } },
-      { count: 50, radius: 152, spread: 34, scale: 1.75, seed: 77, detail: 0, mix: 0.56,
+      { count: 70, radius: 152, spread: 34, scale: 1.75, seed: 77, detail: 0, mix: 0.56,
         weights: { waringin: 0.35, tall: 0.5, low: 0.15 } },
+      // A forest edge at the fog line. Without it the field simply ran out into
+      // haze, and the horizon beat looked over an empty plain to the mountains.
+      { count: 84, radius: 206, spread: 40, scale: 2.1, seed: 133, detail: 0, mix: 0.7,
+        weights: { waringin: 0.4, tall: 0.45, low: 0.15 } },
+      // Inside the wall: a planted row along the sides and back, the way sawo
+      // kecik stand in the keraton's sand courtyards. Fixed spots, not a ring —
+      // `radius` here only marks them as near, for shadow casting.
+      { spots: groveSpots(), radius: 46, scale: 0.62, seed: 313, detail: 2, mix: 0.04,
+        weights: { waringin: 0.75, tall: 0, low: 0.25 } },
     ];
 
     const foliage = foliageMaps();
@@ -712,22 +908,29 @@ export class Environment extends THREE.Group {
       const base = new THREE.Color(0xffffff).lerp(fogCol, r.mix);
 
       // Lay out every tree in the ring first, tagging each with its variant, then
-      // group by variant. One InstancedMesh per variant per ring — nine draw calls
-      // for 124 trees.
+      // group by variant. One InstancedMesh per variant per ring — two draw calls
+      // (leaves + trunks) per variant, whatever the tree count.
       const buckets = { waringin: [], tall: [], low: [] };
       const names = Object.keys(buckets);
+      const n = r.spots ? r.spots.length : Math.round(r.count * veg);
 
-      for (let i = 0; i < r.count; i++) {
-        let a = rnd() * Math.PI * 2;
+      for (let i = 0; i < n; i++) {
+        let a;
+        if (r.spots) {
+          // Position is (sin a, 0, cos a) * rad — see below.
+          a = Math.atan2(r.spots[i][0], r.spots[i][1]);
+        } else {
+          a = rnd() * Math.PI * 2;
 
-        // Keep the +Z approach corridor clear. The camera flies straight down it
-        // from z=66 to the pendopo, so a near tree anywhere in front simply blocks
-        // the hero shot. Position is (sin a, 0, cos a) — "in front" is cos a > 0.
-        // Mirroring across the x-axis moves the offender to the far side without
-        // disturbing the ring's overall density.
-        if (r.radius < 70) {
-          const inCorridor = Math.cos(a) > 0.1 && Math.abs(Math.sin(a)) < 0.66;
-          if (inCorridor) a = Math.PI - a;
+          // Keep the +Z approach corridor clear. The camera flies straight down it
+          // from z=66 to the pendopo, so a near tree anywhere in front simply blocks
+          // the hero shot. Position is (sin a, 0, cos a) — "in front" is cos a > 0.
+          // Mirroring across the x-axis moves the offender to the far side without
+          // disturbing the ring's overall density.
+          if (r.radius < 70) {
+            const inCorridor = Math.cos(a) > 0.1 && Math.abs(Math.sin(a)) < 0.66;
+            if (inCorridor) a = Math.PI - a;
+          }
         }
 
         // Weighted variant pick.
@@ -743,7 +946,7 @@ export class Environment extends THREE.Group {
         }
 
         buckets[pick].push({
-          rad: r.radius + (rnd() - 0.5) * r.spread,
+          rad: r.spots ? Math.hypot(...r.spots[i]) : r.radius + (rnd() - 0.5) * r.spread,
           a,
           s: r.scale * (0.72 + rnd() * 0.62),
           ry: rnd() * Math.PI * 2,
@@ -843,6 +1046,101 @@ export class Environment extends THREE.Group {
    */
   _buildForeground() {}
 
+  /**
+   * Undergrowth outside the wall: low bushes hugging its outer face and
+   * scattered through the field, clustering around where trees would drop seed.
+   *
+   * Trees standing straight out of bare ground were the other half of the
+   * "savanna" read at the far beats. A shrub layer is what makes the ground
+   * plane itself look planted rather than only dotted with trees.
+   *
+   * One bush shape — five squashed clumps — in a single InstancedMesh, scaled and
+   * rotated per instance, so the whole layer is one draw call.
+   */
+  _buildShrubs() {
+    const rnd = mulberry32(2207);
+    const veg = this.tier.vegetation ?? 1;
+    const WALL = 52;
+
+    const parts = [];
+    for (let i = 0; i < 5; i++) {
+      const r = 0.42 + rnd() * 0.38;
+      const clump = new THREE.IcosahedronGeometry(r, 1);
+      clump.scale(1.15, 0.7, 1.15);
+      const a = rnd() * Math.PI * 2;
+      const d = i === 0 ? 0 : 0.35 + rnd() * 0.35;
+      clump.translate(Math.cos(a) * d, r * 0.55 + rnd() * 0.15, Math.sin(a) * d);
+      parts.push(clump);
+    }
+    const geo = this._track(mergeGeometries(parts));
+
+    const mat = this._track(
+      applyMaps(
+        new THREE.MeshStandardMaterial({
+          color: new THREE.Color(0xffffff).lerp(new THREE.Color(sceneColors.skyLow), 0.08),
+          roughness: 1,
+          metalness: 0,
+        }),
+        foliageMaps(),
+        1.1,
+        1.0,
+      ),
+    );
+
+    /** Keep the approach clear: nothing in front of the gate along the camera path. */
+    const blocked = (x, z) => z > WALL - 2 && Math.abs(x) < 24;
+
+    const spots = [];
+    // Along the outer face of the wall, a couple of units out.
+    const perSide = Math.round(26 * veg);
+    for (let side = 0; side < 4; side++) {
+      for (let i = 0; i < perSide; i++) {
+        const t = (rnd() * 2 - 1) * (WALL + 2);
+        const off = WALL + 1.6 + rnd() * 2.8;
+        const [x, z] =
+          side === 0 ? [t, -off] : side === 1 ? [-off, t] : side === 2 ? [off, t] : [t, off];
+        if (!blocked(x, z)) spots.push([x, z, 0.8 + rnd() * 0.7]);
+      }
+    }
+    // Scattered through the field in small clusters.
+    const clusters = Math.round(70 * veg);
+    for (let c = 0; c < clusters; c++) {
+      const a = rnd() * Math.PI * 2;
+      const rad = 60 + Math.pow(rnd(), 1.4) * 110;
+      const cx = Math.sin(a) * rad;
+      const cz = Math.cos(a) * rad;
+      const k = 1 + Math.floor(rnd() * 4);
+      for (let j = 0; j < k; j++) {
+        const x = cx + (rnd() - 0.5) * 6;
+        const z = cz + (rnd() - 0.5) * 6;
+        if (!blocked(x, z) && Math.max(Math.abs(x), Math.abs(z)) > WALL + 1.5) {
+          spots.push([x, z, 0.9 + rnd() * 1.1]);
+        }
+      }
+    }
+
+    const inst = new THREE.InstancedMesh(geo, mat, spots.length);
+    const dummy = new THREE.Object3D();
+    const tint = new THREE.Color();
+    for (let i = 0; i < spots.length; i++) {
+      const [x, z, s] = spots[i];
+      dummy.position.set(x, -0.05, z);
+      dummy.rotation.set(0, rnd() * Math.PI * 2, 0);
+      dummy.scale.set(s * (0.85 + rnd() * 0.3), s * (0.75 + rnd() * 0.4), s);
+      dummy.updateMatrix();
+      inst.setMatrixAt(i, dummy.matrix);
+      tint.setScalar(0.78 + rnd() * 0.34);
+      inst.setColorAt(i, tint);
+    }
+    inst.instanceMatrix.needsUpdate = true;
+    if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+    // The shadow map is static (rendered once), so casting costs nothing per frame.
+    inst.castShadow = true;
+    inst.receiveShadow = true;
+    this.add(inst);
+    this.shrubs = inst;
+  }
+
   /** Horizontal haze bands that sit between the depth layers and soften each seam. */
   _buildMist() {
     const tex = glowTexture();
@@ -875,6 +1173,8 @@ export class Environment extends THREE.Group {
   }
 
   update(elapsed) {
+    this.skyUniforms.uTime.value = elapsed;
+
     // Mist breathes very slowly — enough to keep the far field from looking frozen.
     for (let i = 0; i < this.mist.length; i++) {
       const m = this.mist[i];

@@ -2,14 +2,15 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { palette, sceneColors, beats } from '../config/tokens.js';
 import { detectTier, pixelRatioFor, ResolutionAdaptor } from '../config/quality.js';
 import { Pendopo } from './Pendopo.js';
 import { Dancer } from './Dancer.js';
 import { Environment } from './Environment.js';
-import { Particles } from './Particles.js';
 import { CameraRig } from './CameraRig.js';
+import { SunbeamsPass } from './Sunbeams.js';
 import { disposeTextures } from './textures.js';
 
 /**
@@ -55,6 +56,9 @@ const SUN_DISTANCE = 120;
  * lighting arc across the scroll; this only rescales it.
  */
 const AMBIENT_SCALE = 0.26;
+
+/** Sunbeam brightness per unit of sun intensity, at full interiority. */
+const SUNBEAM_SCALE = 0.5;
 
 /**
  * Sun/ambient state at each beat, interpolated per frame. Timings come from the
@@ -257,7 +261,8 @@ export class Scene {
   }
 
   /**
-   * Post chain: linear render → ambient occlusion → tone map to screen.
+   * Post chain: linear render → ambient occlusion → sunbeams → bloom → tone map
+   * to screen.
    *
    * GTAO is the other half of "realistic". Direct light plus a hemisphere fill
    * leaves every crevice as bright as the surface around it, so the eye gets no
@@ -310,6 +315,22 @@ export class Scene {
       this.composer.addPass(gtao);
       this.gtao = gtao;
 
+      // Shafts of sun through the colonnade, marched against the shadow map and
+      // GTAO's depth (so no extra scene render). Self-disabling outdoors.
+      this.sunbeams = new SunbeamsPass(this.camera, this.sun, gtao.depthTexture, SUN_DIR);
+      this.composer.addPass(this.sunbeams);
+
+      // Bloom, on the linear HDR buffer before tone mapping, so the threshold is
+      // in light units rather than screen brightness. 1.25 sits above the sunlit
+      // cream paving and the pale sky (both just under 1 at the brightest beat),
+      // so what spills is only what is genuinely hot: the sun's own glare and
+      // the specular glints on the gilt. Bloom below that turned the whole
+      // courtyard into a soft white haze. Runs at half resolution internally.
+      if (this.tier.bloom) {
+        this.bloom = new UnrealBloomPass(size, 0.32, 0.55, 1.25);
+        this.composer.addPass(this.bloom);
+      }
+
       this.composer.addPass(new OutputPass());
     } catch (err) {
       console.warn('[mataram] post-processing unavailable, rendering direct:', err);
@@ -337,10 +358,21 @@ export class Scene {
       this.composer.setPixelRatio(ratio);
       this.composer.setSize(w, h);
       const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
-      this.gtao?.setSize(size.x, size.y);
+      this._sizeAO(size.x, size.y);
     }
+  }
 
-    this.particles?.onResize(ratio);
+  /**
+   * GTAO's own targets at `tier.gtaoScale` of the drawing buffer. Must run after
+   * the composer's setSize, which hands every pass the full size.
+   *
+   * Scaled down, the normal pass, the AO and its denoise all shrink by the square
+   * of the scale; the blend still writes the full-size frame, upsampling the AO
+   * bilinearly — AO is low-frequency and the denoise has already softened it.
+   */
+  _sizeAO(width, height) {
+    const s = this.tier.gtaoScale ?? 1;
+    this.gtao?.setSize(Math.max(1, Math.round(width * s)), Math.max(1, Math.round(height * s)));
   }
 
   _initContent() {
@@ -356,10 +388,6 @@ export class Scene {
     this.dancer = new Dancer();
     this.dancer.position.set(0, 1.2, 0);
     this.scene.add(this.dancer);
-    window.__scene = this; // TEMP: screenshot hook, remove
-
-    this.particles = new Particles(900);
-    this.scene.add(this.particles);
   }
 
   /**
@@ -460,6 +488,8 @@ export class Scene {
     this.scene.fog.color.copy(this._cFog);
     this.scene.fog.density = L.fogD;
     this.environment.skyUniforms.uSunStrength.value = L.sky;
+    // Follows the sun's own strength, so the shafts dim with the light schedule.
+    this.sunbeams?.update(this.rig.interiority * L.sunI * SUNBEAM_SCALE, this.sun.color);
 
     this.pendopo.update(elapsed, this.rig.interiority);
     // Two phrases across the page — enough that the dance reads as continuous,
@@ -470,7 +500,6 @@ export class Scene {
     // holds her in a near-full-body shot. The signature pose should happen in the
     // one frame built to show it, not somewhere in between.
     this.dancer.update(this.progress * 2 + 0.25, elapsed);
-    this.particles.update(elapsed, this.rig.interiority);
     this.environment.update(elapsed);
 
     if (this.composer) this.composer.render();
@@ -497,9 +526,12 @@ export class Scene {
     this.pendopo.dispose();
     this.dancer.dispose();
     this.environment.dispose();
-    this.particles.dispose();
     disposeTextures();
     this._envTarget?.dispose();
+    // The composer frees its own buffers, not its passes'.
+    this.gtao?.dispose();
+    this.sunbeams?.dispose();
+    this.bloom?.dispose();
     this.composer?.dispose();
     this.renderer.dispose();
   }

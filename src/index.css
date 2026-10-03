@@ -312,6 +312,19 @@
 }
 
 /*
+  Di ponsel yang ada di belakang band bukan render 3D, melainkan batik kawung
+  emas pucat di atas cream (PlainBackdrop memasang .is-plain). Tidak ada
+  bagian gelap yang perlu ditutupi, jadi pelatnya boleh lebih tipis dan
+  batiknya tembus sebagai tekstur kertas. Di bawah reduced-transparency tetap
+  pekat seperti di atas.
+*/
+@media not (prefers-reduced-transparency: reduce) {
+  html.is-plain {
+    --band-alpha: 0.72;
+  }
+}
+
+/*
   Kaca cair — panel lepas yang mengambang di atas halaman (menu mobile).
 
   Bedanya dengan kaca buram biasa ada di tepinya: garis sorot putih di atas,
@@ -365,6 +378,23 @@
     transparent 0 9px,
     rgb(201 163 78 / 0.07) 9px 10px
   );
+}
+
+/*
+  Batik kawung — latar homepage di ponsel (components/home/PlainBackdrop.jsx).
+
+  Kawung, bersama parang, dulu motif larangan: hanya boleh dikenakan keluarga
+  keraton Mataram. Susunannya yang klasik — diagonal: empat kelopak lonjong
+  mengitari satu titik, dan tiap kelopak dipakai bersama dua bunga yang
+  bertetangga. Di tile 48px bunga duduk di keempat sudut dan di tengah;
+  kelopaknya di titik-tengah garis yang menghubungkan keduanya, miring 45°.
+  Belah ketupat kecil mengisi celah di antara empat kelopak.
+
+  Satu warna emas, garis saja; kepekatannya diatur pemakainya, bukan di sini.
+*/
+@utility batik-kawung {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23C9A34E' stroke-width='1'%3E%3Cellipse cx='12' cy='12' rx='14.5' ry='6.4' transform='rotate(45 12 12)'/%3E%3Cellipse cx='36' cy='12' rx='14.5' ry='6.4' transform='rotate(-45 36 12)'/%3E%3Cellipse cx='12' cy='36' rx='14.5' ry='6.4' transform='rotate(-45 12 36)'/%3E%3Cellipse cx='36' cy='36' rx='14.5' ry='6.4' transform='rotate(45 36 36)'/%3E%3C/g%3E%3Cg fill='%23C9A34E'%3E%3Cg fill-opacity='.5'%3E%3Cellipse cx='12' cy='12' rx='6' ry='1.7' transform='rotate(45 12 12)'/%3E%3Cellipse cx='36' cy='12' rx='6' ry='1.7' transform='rotate(-45 36 12)'/%3E%3Cellipse cx='12' cy='36' rx='6' ry='1.7' transform='rotate(-45 12 36)'/%3E%3Cellipse cx='36' cy='36' rx='6' ry='1.7' transform='rotate(45 36 36)'/%3E%3C/g%3E%3Ccircle cx='24' cy='24' r='2'/%3E%3Ccircle cx='0' cy='0' r='2'/%3E%3Ccircle cx='48' cy='0' r='2'/%3E%3Ccircle cx='0' cy='48' r='2'/%3E%3Ccircle cx='48' cy='48' r='2'/%3E%3Cpath d='M24-2.6 26.6 0 24 2.6 21.4 0zM24 45.4 26.6 48 24 50.6 21.4 48zM0 21.4 2.6 24 0 26.6-2.6 24zM48 21.4 50.6 24 48 26.6 45.4 24z'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 52px 52px;
 }
 
 /* Scrollbar default berupa balok abu di tengah timeline emas. */
@@ -573,6 +603,42 @@
   from {
     opacity: 0;
     transform: translateY(-10px);
+  }
+}
+
+/*
+  ── GAMBAR GARIS ──────────────────────────────────────────────────────────
+
+  Ornamen ponsel (components/home/Ornaments.jsx) yang "digambar" sekali saat
+  tirai asap terbuka. Garis bertanda [data-draw] memakai pathLength="1",
+  jadi satu dasharray berlaku untuk panjang berapa pun; isian [data-fill]
+  menyusul setelah garisnya hampir selesai. Dipicu class `is-drawn`.
+
+  Jedanya 0.6s: tirai tersibak dari tengah, dan ornamen di bawah layar baru
+  terbuka sekitar setengah detik kemudian.
+*/
+@layer components {
+  .line-draw [data-draw] {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    transition: stroke-dashoffset 2.2s cubic-bezier(0.45, 0, 0.2, 1) 0.6s;
+  }
+  .line-draw [data-fill] {
+    opacity: 0;
+    transition: opacity 1.2s ease-out 1.7s;
+  }
+  .line-draw.is-drawn [data-draw] {
+    stroke-dashoffset: 0;
+  }
+  .line-draw.is-drawn [data-fill] {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .line-draw [data-draw],
+    .line-draw [data-fill] {
+      transition: none;
+    }
   }
 }
 

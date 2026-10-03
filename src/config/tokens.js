@@ -30,7 +30,9 @@ export const sceneColors = {
   timber: '#6E5A3C', // soko guru columns — aged teak
   timberDark: '#4A3D28',
   skyLow: '#EFE7D2', // horizon haze
-  skyHigh: '#D8DFD3', // zenith, faint green cast
+  // Zenith: a pale celadon. It was #D8DFD3, nearly the horizon's cream, and the
+  // sky read as one flat wash with nothing for the clouds to stand against.
+  skyHigh: '#C3D2CF',
 };
 
 export const fonts = {
